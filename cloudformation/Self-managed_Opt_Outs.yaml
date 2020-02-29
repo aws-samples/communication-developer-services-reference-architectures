@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Connect as an Amazon Pinpoint Channel
+
+Parameters:
+  PinpointProjectId:
+    Type: String
+    Description: Amazon Pinpoint Project ID if one already exists, blank to create one
+  PinpointProjectName:
+    Type: String
+    Default: "My Pinpoint Project"
+    Description: "If no PinpointProjectId provided, name to be used to create the Pinpoint project"
+
+Conditions:
+  NeedsPinpointProjectId: !Equals
+      - ''
+      - !Ref PinpointProjectId
+
+Resources:
+  PinpointApplication:
+    Type: AWS::Pinpoint::App
+    Condition: NeedsPinpointProjectId
+    Properties:
+      Name: !Ref PinpointProjectName
+
+  TwoWaySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: 'Two Way SMS'
+      Subscription:
+        -
+          Endpoint: !GetAtt TwoWaySMSLambda.Arn
+          Protocol: "lambda"
+
+
+  TwoWaySMSLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt TwoWaySMSLambdaRole.Arn
+      Runtime: "python3.7"
+      Timeout: 60
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PINPOINT_PROJECT_ID: !If
+              - NeedsPinpointProjectId
+              - !Ref PinpointApplication
+              - !Ref PinpointProjectId
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import boto3
+          import os
+
+          pinpoint = boto3.client('pinpoint')
+
+          def lambda_handler(event, context):
+              logging.getLogger().setLevel('DEBUG')
+              logging.debug(json.dumps(event))
+
+              for record in event['Records']:
+                messagejson = record['Sns']['Message']
+                logging.debug('Found Message %s', messagejson)
+
+                try:
+                  message = json.loads(messagejson)
+
+                  txt_response = message['messageBody']
+
+                  if (
+                      'ARRET' in txt_response.upper() or
+                      'CANCEL' in txt_response.upper() or
+                      'END' in txt_response.upper() or
+                      'OPT-OUT' in txt_response.upper() or
+                      'OPTOUT' in txt_response.upper() or
+                      'QUIT' in txt_response.upper() or
+                      'REMOVE' in txt_response.upper() or
+                      'STOP' in txt_response.upper() or
+                      'TD' in txt_response.upper() or
+                      'UNSUBSCRIBE'in txt_response.upper()
+                    ):
+
+                    num = message['originationNumber']
+
+                    # CUSTOMER TODO - assumes endpoint id is the same as the SMS address minus the "+" at the beginning
+                    #    Replace with call to database to lookup endpoint id by phone number otherwise
+                    endpointId = num[1:]
+
+                    logging.info('Opting out: %s', endpointId)
+
+                    addresses = {}
+                    addresses[num] = {
+                      'ChannelType': 'SMS'
+                    }
+
+                    pinpoint.send_messages(
+                      ApplicationId=os.environ['PINPOINT_PROJECT_ID'],
+                      MessageRequest={
+                        'Addresses': addresses,
+                        'MessageConfiguration': {
+                          'SMSMessage': {
+                            'Body': 'You have successfully been removed.'
+                          }
+                        }
+                      }
+                    )
+
+                    pinpoint.update_endpoint(
+                        ApplicationId=os.environ['PINPOINT_PROJECT_ID'],
+                        EndpointId=endpointId,
+                        EndpointRequest={
+                            'Address': num,
+                            'ChannelType': 'SMS',
+                            'OptOut': 'ALL'
+                        }
+                    )
+
+                except Exception as error:
+                  logging.error('Found Error: %s', error)
+
+  TwoWaySMSLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        -
+          PolicyName: "LambdaExecutionPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "mobiletargeting:UpdateEndpoint"
+                  - "mobiletargeting:SendMessages"
+                Resource:
+                  !Sub
+                    - 'arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${ProjectId}*'
+                    - {ProjectId: !If [NeedsPinpointProjectId, !Ref PinpointApplication, !Ref PinpointProjectId] }
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      Principal: "sns.amazonaws.com"
+      SourceArn: !Ref TwoWaySNSTopic
+      FunctionName: !GetAtt TwoWaySMSLambda.Arn

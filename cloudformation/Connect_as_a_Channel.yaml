@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Connect as an Amazon Pinpoint Channel
+
+Parameters:
+  PinpointProjectId:
+    Type: String
+    Description: Amazon Pinpoint Project ID if one already exists, blank to create one
+  PinpointProjectName:
+    Type: String
+    Default: "My Pinpoint Project"
+    Description: "If no PinpointProjectId provided, name to be used to create the Pinpoint project"
+  ConnectContactFlowId:
+    Type: String
+    Description: Amazon Connect Contact Flow ID to use for the outbound call
+  ConnectInstanceId:
+    Type: String
+    Description: Amazon Connect Instance ID to use for the outbound call
+  ConnectQueueId:
+    Type: String
+    Description: Amazon Connect Queue ID to use for the outbound call
+
+Conditions:
+  NeedsPinpointProjectId: !Equals
+      - ''
+      - !Ref PinpointProjectId
+
+Resources:
+  PinpointApplication:
+    Type: AWS::Pinpoint::App
+    Condition: NeedsPinpointProjectId
+    Properties:
+      Name: !Ref PinpointProjectName
+
+  PinpointApplicationSettings:
+    Type: AWS::Pinpoint::ApplicationSettings
+    Properties:
+      ApplicationId: !If
+          - NeedsPinpointProjectId
+          - !Ref PinpointApplication
+          - !Ref PinpointProjectId
+      CampaignHook:
+        LambdaFunctionName: !GetAtt DeliveryCampaignHookLambdaFunction.Arn
+        Mode: 'DELIVERY'
+    DependsOn: LambdaPermission
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt DeliveryCampaignHookLambdaFunction.Arn
+      Principal: !Sub 'pinpoint.${AWS::Region}.amazonaws.com'
+      SourceArn:
+        !Sub
+          - 'arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:/apps/${ProjectId}*'
+          - {ProjectId: !If [NeedsPinpointProjectId, !Ref PinpointApplication, !Ref PinpointProjectId] }
+
+  DeliveryCampaignHookLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt DeliveryCampaignHookLambdaFunctionRole.Arn
+      Runtime: "python3.7"
+      Timeout: 60
+      MemorySize: 1024
+      Environment:
+        Variables:
+          CONNECT_CONTACT_FLOW_ID: !Ref ConnectContactFlowId
+          CONNECT_INSTANCE_ID: !Ref ConnectInstanceId
+          CONNECT_QUEUE_ID: !Ref ConnectQueueId
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import boto3
+          import os
+
+          connect = boto3.client('connect')
+
+          def lambda_handler(event, context):
+              logging.getLogger().setLevel('DEBUG')
+              logging.debug(json.dumps(event))
+
+              message = event['Message']['smsmessage']['body']
+
+              # Loop over each incoming Endpoint
+              for endpointId,endpoint in event['Endpoints'].items():
+
+                if endpoint['ChannelType'] == 'SMS':
+
+                  # initiate outbound voice call
+                  response = connect.start_outbound_voice_contact(
+                    DestinationPhoneNumber=endpoint['Address'],
+                    ContactFlowId=os.environ['CONNECT_CONTACT_FLOW_ID'],
+                    InstanceId=os.environ['CONNECT_INSTANCE_ID'],
+                    QueueId=os.environ['CONNECT_QUEUE_ID'],
+                    Attributes={
+                        'Message': message
+                    }
+                  )
+
+                  logging.info(json.dumps(response))
+
+
+  DeliveryCampaignHookLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        -
+          PolicyName: "LambdaExecutionPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "connect:StartOutboundVoiceContact"
+                Resource: !Sub "arn:aws:connect:${AWS::Region}:${AWS::AccountId}:instance/${ConnectInstanceId}/contact/*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"

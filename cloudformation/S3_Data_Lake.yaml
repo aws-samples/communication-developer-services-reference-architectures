@@ -1,0 +1,980 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Pinpoint Event Processing
+
+Parameters:
+
+  PinpointProjectName:
+    Type: String
+    Default: "My Pinpoint Project"
+    Description: "Name to be used to create the Pinpoint project"
+  EventS3BucketName:
+    Type: String
+    Description: Name of the S3 bucket to create to contain the Pinpoint events - must be unique!
+  ConfigurationSetName:
+    Type: String
+    Description: Name of the SES Configuration Set to create
+  EmailFromAddress:
+    Type: String
+    Description: SES verified email address that you want to send email from in Pinpoint
+  EmailIdentityArn:
+    Type: String
+    Description: The Amazon Resource Name (ARN) of the identity, verified with Amazon Simple Email Service (Amazon SES), that you want to use when you send email
+  EventAthenaDatabaseName:
+    Type: String
+    Description: Name of the Athena database created in Glue
+    Default: "due_eventdb"
+
+
+Resources:
+  PinpointProject:
+    Type: AWS::Pinpoint::App
+    Properties:
+      Name: !Ref PinpointProjectName
+
+  PinpointProjectEmailChannel:
+    Type: AWS::Pinpoint::EmailChannel
+    Properties:
+      ApplicationId: !Ref PinpointProject
+      ConfigurationSet: !Ref ConfigSet
+      Enabled: true
+      FromAddress: !Ref EmailFromAddress
+      Identity: !Ref EmailIdentityArn
+      RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/service-role/pinpoint-events"
+
+
+  ##### S3 BUCKETS
+  #######################################
+
+  DataS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: Not public facing.
+    Properties:
+      BucketName: !Ref EventS3BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LogBucket
+        LogFilePrefix: pinpoint-event-processing/
+
+
+  LogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: This is the log bucket.
+    Properties:
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: AWSCloudTrailAclCheck
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:GetBucketAcl"
+          Resource: !Sub arn:aws:s3:::${LogBucket}
+        - Sid: AWSCloudTrailWrite
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:PutObject"
+          Resource: !Sub arn:aws:s3:::${LogBucket}/AWSLogs/${AWS::AccountId}/*
+          Condition:
+            StringEquals:
+              "s3:x-amz-acl": "bucket-owner-full-control"
+
+
+  #### KINESIS FIREHOSE - SES
+  #######################################
+
+  EventSendFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/email_send/"
+        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
+
+  EventBounceFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/email_bounce/"
+        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
+
+  EventComplaintFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/email_complaint/"
+        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
+
+  EventDeliveryFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/email_delivery/"
+        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
+
+  EventOpenFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/email_open/"
+        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
+
+  EventClickFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/email_click/"
+        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
+
+  SESKinesisFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - firehose.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "s3:AbortMultipartUpload"
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:PutObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${EventS3BucketName}*"
+                  - !Sub "arn:aws:s3:::${EventS3BucketName}"
+              -
+                Effect: "Allow"
+                Action: "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/kinesisfirehose/*:log-stream:*"
+
+
+  ConfigSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: !Ref ConfigurationSetName
+
+  ConfigSetEventSendDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    Properties:
+      ConfigurationSetName: !Ref ConfigSet
+      EventDestination:
+        Enabled: true
+        KinesisFirehoseDestination:
+          DeliveryStreamARN: !GetAtt EventSendFirehose.Arn
+          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
+        MatchingEventTypes:
+          - "send"
+
+  ConfigSetEventBounceDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    DependsOn: ConfigSetEventSendDestination
+    Properties:
+      ConfigurationSetName: !Ref ConfigSet
+      EventDestination:
+        Enabled: true
+        KinesisFirehoseDestination:
+          DeliveryStreamARN: !GetAtt EventBounceFirehose.Arn
+          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
+        MatchingEventTypes:
+          - "bounce"
+
+  ConfigSetEventComplaintDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    DependsOn: ConfigSetEventBounceDestination
+    Properties:
+      ConfigurationSetName: !Ref ConfigSet
+      EventDestination:
+        Enabled: true
+        KinesisFirehoseDestination:
+          DeliveryStreamARN: !GetAtt EventComplaintFirehose.Arn
+          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
+        MatchingEventTypes:
+          - "complaint"
+
+  ConfigSetEventDeliveryDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    DependsOn: ConfigSetEventComplaintDestination
+    Properties:
+      ConfigurationSetName: !Ref ConfigSet
+      EventDestination:
+        Enabled: true
+        KinesisFirehoseDestination:
+          DeliveryStreamARN: !GetAtt EventDeliveryFirehose.Arn
+          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
+        MatchingEventTypes:
+          - "delivery"
+
+  ConfigSetEventOpenDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    DependsOn: ConfigSetEventDeliveryDestination
+    Properties:
+      ConfigurationSetName: !Ref ConfigSet
+      EventDestination:
+        Enabled: true
+        KinesisFirehoseDestination:
+          DeliveryStreamARN: !GetAtt EventOpenFirehose.Arn
+          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
+        MatchingEventTypes:
+          - "open"
+
+  ConfigSetEventClickDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    DependsOn: ConfigSetEventOpenDestination
+    Properties:
+      ConfigurationSetName: !Ref ConfigSet
+      EventDestination:
+        Enabled: true
+        KinesisFirehoseDestination:
+          DeliveryStreamARN: !GetAtt EventClickFirehose.Arn
+          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
+        MatchingEventTypes:
+          - "click"
+
+  ConfigSetKinesisStreamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ses.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "firehose:PutRecordBatch"
+                  - "firehose:DescribeDeliveryStream"
+                Resource:
+                  - !GetAtt EventSendFirehose.Arn
+                  - !GetAtt EventBounceFirehose.Arn
+                  - !GetAtt EventComplaintFirehose.Arn
+                  - !GetAtt EventDeliveryFirehose.Arn
+                  - !GetAtt EventOpenFirehose.Arn
+                  - !GetAtt EventClickFirehose.Arn
+
+
+  #### KINESIS FIREHOSE - Pinpoint
+  #######################################
+  PinpointEventStream:
+    Type: AWS::Pinpoint::EventStream
+    Properties:
+      ApplicationId: !Ref PinpointProject
+      DestinationStreamArn: !GetAtt PinpointEventFirehose.Arn
+      RoleArn: !GetAtt PinpointKinesisStreamRole.Arn
+
+  PinpointEventFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/sms/"
+        RoleARN: !GetAtt PinpointKinesisFirehoseRole.Arn
+        ProcessingConfiguration:
+          Enabled: TRUE
+          Processors:
+            -
+              Parameters:
+                -
+                  ParameterName: "LambdaArn"
+                  ParameterValue: !GetAtt FirehoseRecordConversionLambda.Arn
+                -
+                  ParameterName: "BufferIntervalInSeconds"
+                  ParameterValue: 60
+                -
+                  ParameterName: "BufferSizeInMBs"
+                  ParameterValue: 3
+                -
+                  ParameterName: "NumberOfRetries"
+                  ParameterValue: 3
+                -
+                  ParameterName: "RoleArn"
+                  ParameterValue: !GetAtt PinpointKinesisFirehoseRole.Arn
+              Type: "Lambda"
+
+  FirehoseRecordConversionLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+        Handler: index.handler
+        Role: !GetAtt FirehoseRecordConversionLambdaRole.Arn
+        Runtime: "nodejs12.x"
+        Timeout: 60
+        Code:
+          ZipFile: |
+            exports.handler = async (event) => {
+
+              const output = [];
+
+              event.records.forEach(record => {
+
+                try {
+                  // Decode the base64 message
+                  const decoded = JSON.parse(Buffer.from(record.data, 'base64').toString('ascii'));
+
+                  // Filter out Test Messages
+                  // Filter out email messages since those are coming from SES Configuration Set
+                  if (decoded.event_type === '_test.event_stream' || decoded.event_type.startsWith('_email.')) {
+                    output.push({
+                      data: record.data,
+                      recordId: record.recordId,
+                      result: 'Dropped'
+                    });
+
+                  } else {
+
+                    // Trim off millisecond precision
+                    decoded.arrival_timestamp = Math.round(decoded.arrival_timestamp / 1000);
+                    decoded.event_timestamp = Math.round(decoded.event_timestamp / 1000);
+
+                    output.push({
+                      // Add a linebreak for easier Glue crawling
+                      data: Buffer.from(JSON.stringify(decoded) + '\n').toString('base64'),
+                      recordId: record.recordId,
+                      result: 'Ok'
+                    });
+                  }
+                }
+                catch(err) {
+                  console.error('Encountered Error when processing Kinesis event record for RecordId: ' + record.recordId + ', error: ' + JSON.stringify(err));
+                  output.push({
+                    data: record.data,
+                    recordId: record.recordId,
+                    result: 'Dropped'
+                  });
+                }
+
+              });
+
+              return {records: output};
+            };
+
+
+
+
+  PinpointKinesisStreamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - pinpoint.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "firehose:PutRecordBatch"
+                  - "firehose:DescribeDeliveryStream"
+                Resource: !GetAtt PinpointEventFirehose.Arn
+
+  PinpointKinesisFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - firehose.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "s3:AbortMultipartUpload"
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:PutObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${DataS3Bucket}*"
+                  - !Sub "arn:aws:s3:::${DataS3Bucket}"
+              -
+                Effect: "Allow"
+                Action:
+                  - "lambda:InvokeFunction"
+                  - "lambda:GetFunctionConfiguration"
+                Resource: !GetAtt FirehoseRecordConversionLambda.Arn
+              -
+                Effect: "Allow"
+                Action: "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/kinesisfirehose/*:log-stream:*"
+
+  FirehoseRecordConversionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+
+
+
+  #### GLUE CRAWLER
+  #######################################
+  PinpointEventDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref EventAthenaDatabaseName
+        Description: "SES and Pinpoint Streaming Event Database"
+
+  EventTableSendNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Send Data Lake Table"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_send (
+              mail struct<`timestamp`:string,
+                          source:string,
+                          sourceArn:string,
+                          sendingAccountId:string,
+                          messageId:string,
+                          destination:string,
+                          headersTruncated:boolean,
+                          headers:array<struct<name:string,value:string>>,
+                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
+                          >
+              )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            LOCATION 's3://${DataS3Bucket}/events/email_send/'
+
+  EventTableBounceNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Bounce Data Lake Table"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_bounce (
+              bounce struct<bounceType:string,
+                          bounceSubType:string,
+                          bouncedRecipients:array<struct<emailAddress:string,action:string,status:string,diagnosticCode:string>>,
+                          `timestamp`:string,
+                          feedbackId:string,
+                          reportingMTA:string>,
+              mail struct<`timestamp`:string,
+                          source:string,
+                          sourceArn:string,
+                          sendingAccountId:string,
+                          messageId:string,
+                          destination:string,
+                          headersTruncated:boolean,
+                          headers:array<struct<name:string,value:string>>,
+                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
+                          >
+              )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            LOCATION 's3://${DataS3Bucket}/events/email_bounce/'
+
+  EventTableComplaintNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Complaint Data Lake Table"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_complaint (
+              complaint struct<
+                          complaintSubType:string,
+                          complainedRecipients:array<struct<emailAddress:string>>,
+                          `timestamp`:string,
+                          feedbackId:string,
+                          userAgent:string,
+                          complaintFeedbackType:string,
+                          arrivalDate:string>,
+              mail struct<`timestamp`:string,
+                          source:string,
+                          sourceArn:string,
+                          sendingAccountId:string,
+                          messageId:string,
+                          destination:string,
+                          headersTruncated:boolean,
+                          headers:array<struct<name:string,value:string>>,
+                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
+                          >
+              )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            LOCATION 's3://${DataS3Bucket}/events/email_complaint/'
+
+  EventTableDeliveryNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Delivery Data Lake Table"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_delivery (
+              delivery struct<
+                          `timestamp`:string,
+                          processingTimeMillis:int,
+                          recipients:array<string>,
+                          smtpResponse:string,
+                          reportingMTA:string>,
+              mail struct<`timestamp`:string,
+                          source:string,
+                          sourceArn:string,
+                          sendingAccountId:string,
+                          messageId:string,
+                          destination:string,
+                          headersTruncated:boolean,
+                          headers:array<struct<name:string,value:string>>,
+                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
+                          >
+              )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            LOCATION 's3://${DataS3Bucket}/events/email_delivery/'
+
+  EventTableOpenNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Open Data Lake Table"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_open (
+              open struct<
+                          `timestamp`:string,
+                          userAgent:string,
+                          ipAddress:string>,
+              mail struct<`timestamp`:string,
+                          source:string,
+                          sourceArn:string,
+                          sendingAccountId:string,
+                          messageId:string,
+                          destination:string,
+                          headersTruncated:boolean,
+                          headers:array<struct<name:string,value:string>>,
+                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
+                          >
+              )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            LOCATION 's3://${DataS3Bucket}/events/email_open/'
+
+  EventTableClickNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Click Data Lake Table"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_click (
+              click struct<
+                          `timestamp`:string,
+                          ipAddress:string,
+                          userAgent:string,
+                          link:string>,
+              mail struct<`timestamp`:string,
+                          source:string,
+                          sourceArn:string,
+                          sendingAccountId:string,
+                          messageId:string,
+                          destination:string,
+                          headersTruncated:boolean,
+                          headers:array<struct<name:string,value:string>>,
+                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
+                          >
+              )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            LOCATION 's3://${DataS3Bucket}/events/email_click/'
+
+  EventTableSMSNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the SMS Data Lake Table"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.sms (
+              event_type string,
+              event_timestamp timestamp,
+              arrival_timestamp timestamp,
+              application struct<app_id:string>,
+              client struct<client_id:string>,
+              attributes struct<
+                  campaign_id:string,
+                  sender_request_id:string,
+                  destination_phone_number:string,
+                  record_status:string,
+                  iso_country_code:string,
+                  mcc_mnc:string,
+                  number_of_message_parts:string,
+                  message_id:string,
+                  message_type:string,
+                  origination_phone_number:string
+                >,
+              metrics struct<price_in_millicents_usd:int>
+              )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            LOCATION 's3://${DataS3Bucket}/events/sms/'
+
+  ### Deployment Helper
+  SetupSampleFiles:
+    Type: Custom::LoadLambda
+    Properties:
+      ServiceToken: !GetAtt CustomResourceHelper.Arn
+      CustomResourceAction: SetupSampleFiles
+
+  CustomResourceHelper:
+    Type: AWS::Lambda::Function
+    Properties:
+      Environment:
+        Variables:
+          S3_DATA_BUCKET: !Ref DataS3Bucket
+          EMAIL_SEND_NAMED_QUERY: !Ref EventTableSendNamedQuery
+          EMAIL_BOUNCE_NAMED_QUERY: !Ref EventTableBounceNamedQuery
+          EMAIL_COMPLAINT_NAMED_QUERY: !Ref EventTableComplaintNamedQuery
+          EMAIL_DELIVERY_NAMED_QUERY: !Ref EventTableDeliveryNamedQuery
+          EMAIL_OPEN_NAMED_QUERY: !Ref EventTableOpenNamedQuery
+          EMAIL_CLICK_NAMED_QUERY: !Ref EventTableClickNamedQuery
+          SMS_NAMED_QUERY: !Ref EventTableSMSNamedQuery
+      Description: Helps set up the Optimize Amazon Personalize Campaigns using Amazon Pinpoint Events solution.
+      Handler: index.handler
+      MemorySize: 256
+      Role: !GetAtt CustomResourceHelperRole.Arn
+      Runtime: nodejs12.x
+      Timeout: 300
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk');
+          const https = require("https");
+          const stream = require('stream');
+          const url = require('url');
+          const crypto = require("crypto");
+
+          AWS.config.update({
+            region: process.env.AWS_REGION
+          });
+
+          const athena = new AWS.Athena();
+
+          const uuidv4 = function() {
+            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+              (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+          };
+
+          const runNamedQuery = function(namedQuery) {
+            return athena.getNamedQuery({NamedQueryId: namedQuery}).promise()
+              .then((data) => {
+
+                const params = {
+                  QueryString: data.NamedQuery.QueryString,
+                  ResultConfiguration: {
+                    OutputLocation: `s3://${process.env.S3_DATA_BUCKET}/temp/`
+                  }
+                };
+
+                return athena.startQueryExecution(params).promise()
+                  .catch((err) => {
+                    console.error('Encountered Error calling startQueryExecution with parameters: ' + JSON.stringify(params) + ', error: ' + JSON.stringify(err));
+                    return Promise.reject(err);
+                  })
+              });
+          }
+
+          exports.handler = (event, context, callback) => {
+
+            let responseStatus = 'FAILED';
+            let responseData = {};
+
+            if (event.ResourceProperties.CustomResourceAction === 'GenerateUUID') {
+
+                responseStatus = 'SUCCESS';
+                responseData = {
+                    UUID: uuidv4()
+                };
+                sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+
+            } else if (event.ResourceProperties.CustomResourceAction === 'SetupSampleFiles') {
+
+
+
+              Promise.all([
+                        runNamedQuery(process.env.EMAIL_SEND_NAMED_QUERY),
+                        runNamedQuery(process.env.EMAIL_BOUNCE_NAMED_QUERY),
+                        runNamedQuery(process.env.EMAIL_COMPLAINT_NAMED_QUERY),
+                        runNamedQuery(process.env.EMAIL_DELIVERY_NAMED_QUERY),
+                        runNamedQuery(process.env.EMAIL_OPEN_NAMED_QUERY),
+                        runNamedQuery(process.env.EMAIL_CLICK_NAMED_QUERY),
+                        runNamedQuery(process.env.SMS_NAMED_QUERY)
+                    ])
+                    .then((results) => {
+                      responseStatus = 'SUCCESS';
+                      responseData = {
+                          success: true
+                      };
+                      sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+
+                    })
+                    .catch((results) => {
+
+                      console.log('Received Error: ' + JSON.stringify(results));
+
+                      responseStatus = 'FAILED';
+                      responseData = {
+                          success: false
+                      };
+                      sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+
+                    });
+            }
+          };
+
+          /**
+          * Sends a response to the pre-signed S3 URL
+          */
+          let sendResponse = function(event, callback, logStreamName, responseStatus, responseData) {
+            const responseBody = JSON.stringify({
+                Status: responseStatus,
+                Reason: `See the details in CloudWatch Log Stream: ${logStreamName}`,
+                PhysicalResourceId: logStreamName,
+                StackId: event.StackId,
+                RequestId: event.RequestId,
+                LogicalResourceId: event.LogicalResourceId,
+                Data: responseData,
+            });
+
+            console.log('RESPONSE BODY:\n', responseBody);
+            const parsedUrl = url.parse(event.ResponseURL);
+            const options = {
+                hostname: parsedUrl.hostname,
+                port: 443,
+                path: parsedUrl.path,
+                method: 'PUT',
+                headers: {
+                    'Content-Type': '',
+                    'Content-Length': responseBody.length,
+                }
+            };
+
+            const req = https.request(options, (res) => {
+                console.log('STATUS:', res.statusCode);
+                console.log('HEADERS:', JSON.stringify(res.headers));
+                callback(null, 'Successfully sent stack response!');
+            });
+
+            req.on('error', (err) => {
+                console.log('sendResponse Error:\n', err);
+                callback(err);
+            });
+
+            req.write(responseBody);
+            req.end();
+          };
+
+
+  CustomResourceHelperRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutDestination
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              -
+                Effect: Allow
+                Action:
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:ListMultipartUploadParts"
+                  - "s3:AbortMultipartUpload"
+                  - "s3:CreateBucket"
+                  - "s3:PutObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${DataS3Bucket}"
+                  - !Sub "arn:aws:s3:::${DataS3Bucket}/*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "athena:StartQueryExecution"
+                  - "athena:GetNamedQuery"
+                Resource: !Sub "arn:aws:athena:${AWS::Region}:${AWS::AccountId}:workgroup/*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "glue:GetDatabase"
+                  - "glue:GetDatabases"
+                  - "glue:GetTable"
+                  - "glue:GetTables"
+                  - "glue:GetPartition"
+                  - "glue:GetPartitions"
+                  - "glue:CreateTable"
+                Resource:
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${PinpointEventDatabase}/*"
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${PinpointEventDatabase}"
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"

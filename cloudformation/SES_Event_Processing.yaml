@@ -1,0 +1,310 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: SES Event Processing
+
+Parameters:
+  ConfigurationSetName:
+    Type: String
+    Description: Name of the SES Configuration Set to create
+  SESEventS3BucketName:
+    Type: String
+    Description: Name of the S3 bucket to create to contain the SES events - must be unique!
+
+Resources:
+
+  DataS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: Not public facing.
+    Properties:
+      BucketName: !Ref SESEventS3BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LogBucket
+        LogFilePrefix: ses-event-processing/
+      NotificationConfiguration:
+        LambdaConfigurations:
+          -
+            Event: "s3:ObjectCreated:*"
+            Function: !GetAtt EventProcessingLambda.Arn
+
+  LogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: This is the log bucket.
+    Properties:
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: AWSCloudTrailAclCheck
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:GetBucketAcl"
+          Resource: !Sub arn:aws:s3:::${LogBucket}
+        - Sid: AWSCloudTrailWrite
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:PutObject"
+          Resource: !Sub arn:aws:s3:::${LogBucket}/AWSLogs/${AWS::AccountId}/*
+          Condition:
+            StringEquals:
+              "s3:x-amz-acl": "bucket-owner-full-control"
+
+  SESEventFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
+        BufferingHints:
+          IntervalInSeconds: 300
+          SizeInMBs: 5
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/"
+        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
+
+  SESKinesisFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - firehose.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "s3:AbortMultipartUpload"
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:PutObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${SESEventS3BucketName}*"
+                  - !Sub "arn:aws:s3:::${SESEventS3BucketName}"
+              -
+                Effect: "Allow"
+                Action: "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/kinesisfirehose/*:log-stream:*"
+
+
+  ConfigSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: !Ref ConfigurationSetName
+
+  ConfigSetEventDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    Properties:
+      ConfigurationSetName: !Ref ConfigSet
+      EventDestination:
+        Enabled: true
+        KinesisFirehoseDestination:
+          DeliveryStreamARN: !GetAtt SESEventFirehose.Arn
+          IAMRoleARN: !GetAtt SESKinesisStreamRole.Arn
+        MatchingEventTypes:
+          - "send"
+          - "reject"
+          - "bounce"
+          - "complaint"
+          - "delivery"
+          - "open"
+          - "click"
+          - "renderingFailure"
+
+  SESKinesisStreamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ses.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "firehose:PutRecordBatch"
+                  - "firehose:DescribeDeliveryStream"
+                Resource: !GetAtt SESEventFirehose.Arn
+
+  EventProcessingLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt EventProcessingLambdaRole.Arn
+      Runtime: "python3.7"
+      Timeout: 60
+      Environment:
+        Variables:
+          LOG_LEVEL: "INFO"
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import os
+          import json
+          from botocore.exceptions import ClientError
+
+          sesv2 = boto3.client("sesv2")
+          s3 = boto3.resource("s3")
+
+          def lambda_handler(event, context):
+
+              global log_level
+              log_level = str(os.environ.get("LOG_LEVEL")).upper()
+              if log_level not in [
+                                      "DEBUG", "INFO",
+                                      "WARNING", "ERROR",
+                                      "CRITICAL"
+                                  ]:
+                  log_level = "ERROR"
+              logging.getLogger().setLevel(log_level)
+
+              logging.info(event)
+
+              # Loop over all added files from S3
+              for record in event["Records"]:
+                  bucket = record["s3"]["bucket"]["name"]
+                  key = record["s3"]["object"]["key"]
+
+
+                  obj = s3.Object(bucket, key)
+
+                  # Loop over each SES event in the S3 firehose file
+                  for line in obj.get()["Body"]._raw_stream:
+
+                      try:
+                          ses_event = json.loads(line)
+
+                          logging.info(ses_event)
+
+                          # If event is a Bounce, handle it
+                          if (ses_event["eventType"] == "Bounce" and ses_event["bounce"]["bounceType"] == "Permanent" ):
+                              for recipient in ses_event["bounce"]["bouncedRecipients"]:
+                                  sesv2.put_suppressed_destination(
+                                    EmailAddress = recipient["emailAddress"],
+                                    Reason = "BOUNCE"
+                                  )
+                                  # CUSTOMER TODO - Update customer system with Bounce status
+
+                          # If event is a spam complaint
+                          elif (ses_event["eventType"] == "Complaint"):
+                              for recipient in ses_event["complaint"]["complainedRecipients"]:
+                                  sesv2.put_suppressed_destination(
+                                    EmailAddress = recipient["emailAddress"],
+                                    Reason = "COMPLAINT"
+                                  )
+                                  # CUSTOMER TODO - Update customer system with Complaint status
+                      except Exception as e:
+                          logging.error("Received Error while processing s3 file: %s", e)
+
+
+  EventProcessingLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  EventProcessingLambdaRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref EventProcessingLambdaRole
+      PolicyName: "root"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "ses:PutSuppressedDestination"
+            Resource:
+              "*"
+          -
+            Effect: "Allow"
+            Action:
+              - "s3:GetBucketLocation"
+              - "s3:GetObject"
+              - "s3:ListBucket"
+            Resource:
+              - !Sub arn:aws:s3:::${SESEventS3BucketName}
+              - !Sub arn:aws:s3:::${SESEventS3BucketName}/*
+          -
+            Effect: "Allow"
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  S3InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref EventProcessingLambda
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub arn:aws:s3:::${SESEventS3BucketName}
+      SourceAccount: !Ref "AWS::AccountId"

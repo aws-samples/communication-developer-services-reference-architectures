@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Send-Time Amazon Pinpoint Campaign Attributes
+
+Parameters:
+  PinpointProjectId:
+    Type: String
+    Description: Amazon Pinpoint Project ID if one already exists, blank to create one
+  PinpointProjectName:
+    Type: String
+    Default: "My Pinpoint Project"
+    Description: "If no PinpointProjectId provided, name to be used to create the Pinpoint project"
+
+Conditions:
+  NeedsPinpointProjectId: !Equals
+      - ''
+      - !Ref PinpointProjectId
+
+Resources:
+  PinpointApplication:
+    Type: AWS::Pinpoint::App
+    Condition: NeedsPinpointProjectId
+    Properties:
+      Name: !Ref PinpointProjectName
+
+  PinpointApplicationSettings:
+    Type: AWS::Pinpoint::ApplicationSettings
+    Properties:
+      ApplicationId: !If
+          - NeedsPinpointProjectId
+          - !Ref PinpointApplication
+          - !Ref PinpointProjectId
+      CampaignHook:
+        LambdaFunctionName: !GetAtt FilterCampaignHookLambdaFunction.Arn
+        Mode: 'FILTER'
+    DependsOn: LambdaPermission
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt FilterCampaignHookLambdaFunction.Arn
+      Principal: !Sub 'pinpoint.${AWS::Region}.amazonaws.com'
+      SourceArn:
+        !Sub
+          - 'arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:/apps/${ProjectId}*'
+          - {ProjectId: !If [NeedsPinpointProjectId, !Ref PinpointApplication, !Ref PinpointProjectId] }
+
+  FilterCampaignHookLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt FilterCampaignHookLambdaFunctionRole.Arn
+      Runtime: "python3.7"
+      Timeout: 60
+      MemorySize: 1024
+      Code:
+        ZipFile: |
+          import json
+          import logging
+
+          def lambda_handler(event, context):
+              logging.getLogger().setLevel('DEBUG')
+              logging.debug(json.dumps(event))
+
+              # Loop over each incoming Endpoint
+              for endpointId,endpoint in event['Endpoints'].items():
+
+                  # Mock fetch an offer for the current endpoint
+                  data = mock_call_to_get_offer(endpointId)
+
+                  # Add the data to the Endpoint's Attributes
+                  endpoint['Attributes']['Offer'] = [data]
+
+              # Return the Mutated Endpoints
+              return event['Endpoints']
+
+
+          def mock_call_to_get_offer(endpoint_id):
+
+            #TODO - call a webservice, look up a value from a database, call a CRM API to retrieve an offer for this endpoint
+            return 'some offer for endpointId: ' + endpoint_id;
+
+
+  FilterCampaignHookLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        -
+          PolicyName: "LambdaExecutionPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
