@@ -199,7 +199,7 @@ One option is to create a static import segment from these results that is updat
 
 #### Architecture Diagram
 
-![Screenshot](images/Advanced_Segmentation_S3.png)
+![Screenshot](images/Advanced_Segmentation_s3.png)
 
 #### Use-Case
 
