@@ -187,6 +187,38 @@ _NOTE_: Amazon Pinpoint does not allow you to configure two-way SMS or self-mana
 
 ------
 
+### Advanced Segmentation with Amazon S3 and Amazon Athena
+
+#### Description
+
+Endpoints stored in Amazon Pinpoint enable customers to store addresses across multiple channels all connected to each other via a UserId to represent a single user.  Endpoints also enable you to store User and Endpoint level attributes to be used in Message personalization and Dynamic Segmentation.  This allows for segmentation like "Where [Attribute Name] is [Some Value]".  Ex:  Select all Email endpoints where the User `CustomerStage` is `Renewal` and User `CustomerValue` is `High`.
+
+Some segmentation use-cases call for more advanced segmentation rules where simple attribute matching will not be sufficient. In these cases, we can use customer's existing Data Lakes in Amazon S3 with Amazon Athena as a query engine.  With these services, customers can create segments with much more specificity. Ex: Select all Email endpoints where the User has made a purchase of red shoes in the last 3 months and has opened more than 15 emails in the last 9 months and has clicked on the website page showing product details of our upcoming shoe release in the last 24 hours.
+
+One option is to create a static import segment from these results that is updated daily.  Another option, and represented in the diagram below, is to update an Endpoint attribute array `AdvancedSegmentTarget` with a token signaling they match the criteria.  The `AdvancedSegmentTarget` array would then contain the names of all of the advanced segments the endpoint matches.  This allows the dynamic segment to be better used in Journeys and Recurring campaigns.  This process could be set up to refresh daily via Amazon CloudWatch events and orchestrated by AWS Step Function.
+
+#### Architecture Diagram
+
+![Screenshot](images/Advanced_Segmentation_S3.png)
+
+#### Use-Case
+
+* Advanced segmentation rules
+* Utilize existing S3 Data Lakes
+* Avoid moving data into Pinpoint Attributes that changes frequently
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/Advanced_Segmentation_S3.yaml)
+
+#### Documentation References
+
+* [Amazon S3 as the Data Lake Storage Platform](https://docs.aws.amazon.com/whitepapers/latest/building-data-lakes/amazon-s3-data-lake-storage-platform.html)
+* [What is Amazon Athena?](https://docs.aws.amazon.com/athena/latest/ug/what-is.html)
+* [How Step Functions Works](https://docs.aws.amazon.com/step-functions/latest/dg/how-step-functions-works.html)
+* [Adding Endpoints to Amazon Pinpoint](https://docs.aws.amazon.com/pinpoint/latest/developerguide/audience-define-endpoints.html)
+
+------
+
 ### Send-Time Amazon Pinpoint Campaign Attributes
 
 #### Description
