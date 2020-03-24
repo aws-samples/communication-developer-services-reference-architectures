@@ -85,7 +85,37 @@ Additionally, the Lambda function should be configured to make use of the SES Ac
 
 Sending outbound messages with Pinpoint allows you to track engagement events both in the Pinpoint console and programmatically by consuming the raw events that Pinpoint (and SES) generate.  These events provide a wealth of knowledge on how your end-users are engaging with your messaging and Pinpoint allows you to stream these events to S3 to create a data lake which is excellent for mining, analysis, and future machine learning training and retraining.  
 
-The architecture below shows how Pinpoint can be configured to emit events through Kinesis Firehose into Amazon S3.  This solution uses an API configuration that will use Amazon SES for email events by configuring the Pinpoint email channel to use a SES configuration set.  In this way, we are able to create a Kinesis Firehose per event type which allows us to better partition these events in S3 and ultimately allow Glue to index them easily as separate entities.
+The architecture below shows how Pinpoint can be configured to emit events through Kinesis Firehose into Amazon S3. SES will also be configured to use Pinpoint as an Event Destination, using the SESv2 API, to route all SES email events into the same S3 destination.  Finally, it will register the event schema with Athena and Glue to create a single table for all events, and a series of Views, one for each event type.
+
+This enables Athena Queries to be run against each event type as a flattened view, allowing for queries like:
+
+Ex: Get all Campaigns with Opens, Clicks, Hard Bounces, Soft Bounces, and Unsubscribes
+```
+SELECT
+  pinpoint_campaign_id,
+  (SELECT COUNT(*) FROM email_open WHERE email_open.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumOpens,
+  (SELECT COUNT(*) FROM email_click WHERE email_click.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumClicks,
+  (SELECT COUNT(*) FROM email_hardbounce WHERE email_hardbounce.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumHardBounces,
+  (SELECT COUNT(*) FROM email_softbounce WHERE email_softbounce.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumSoftBounces,
+  (SELECT COUNT(*) FROM email_unsubscribe WHERE email_unsubscribe.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumUnsubs
+
+FROM campaign_send
+GROUP BY pinpoint_campaign_id
+
+```
+
+Ex: Find all emails received by an email address in the last 30 days and check to see if it was opened
+```
+SELECT
+  a.event_timestamp as WhenSent,
+  a.subject as EmailSubject,
+  CASE WHEN b.event_timestamp IS NULL THEN 0 ELSE 1 END as DidOpen
+FROM email_send a
+LEFT JOIN email_open b
+  ON a.message_id = b.message_id
+WHERE contains(a.destination, 'xxxx@example.com') AND a.event_timestamp >  current_timestamp - interval '30' day
+ORDER BY event_timestamp DESC
+```
 
 #### Architecture Diagram
 
@@ -111,6 +141,7 @@ The architecture below shows how Pinpoint can be configured to emit events throu
 * [Setting Up Amazon SES Event Publishing](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/event-publishing-setting-up.html)
 * [Set Up a Kinesis Data Firehose Event Destination for Amazon SES Event Publishing](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/event-publishing-add-event-destination-firehose.html)
 * [Populating the AWS Glue Data Catalog](https://docs.aws.amazon.com/glue/latest/dg/populate-data-catalog.html)
+* [Amazon Athena - Working with Views](https://docs.aws.amazon.com/athena/latest/ug/views.html)
 
 ------
 
@@ -199,7 +230,7 @@ One option is to create a static import segment from these results that is updat
 
 #### Architecture Diagram
 
-![Screenshot](images/Advanced_Segmentation_s3.png)
+![Screenshot](images/Advanced_Segmentation_S3.png)
 
 #### Use-Case
 

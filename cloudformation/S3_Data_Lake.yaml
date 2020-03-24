@@ -3,43 +3,35 @@ Description: Pinpoint Event Processing
 
 Parameters:
 
+  PinpointProjectId:
+    Type: String
+    Description: Amazon Pinpoint Project ID if one already exists, blank to create one
   PinpointProjectName:
     Type: String
     Default: "My Pinpoint Project"
-    Description: "Name to be used to create the Pinpoint project"
-  EventS3BucketName:
-    Type: String
-    Description: Name of the S3 bucket to create to contain the Pinpoint events - must be unique!
+    Description: "If no PinpointProjectId provided, name to be used to create the Pinpoint project"
   ConfigurationSetName:
     Type: String
     Description: Name of the SES Configuration Set to create
-  EmailFromAddress:
+  EventS3BucketName:
     Type: String
-    Description: SES verified email address that you want to send email from in Pinpoint
-  EmailIdentityArn:
-    Type: String
-    Description: The Amazon Resource Name (ARN) of the identity, verified with Amazon Simple Email Service (Amazon SES), that you want to use when you send email
+    Description: Name of the S3 bucket to create to contain the Pinpoint events - must be unique!
   EventAthenaDatabaseName:
     Type: String
     Description: Name of the Athena database created in Glue
     Default: "due_eventdb"
 
+Conditions:
+  NeedsPinpointProjectId: !Equals
+      - ''
+      - !Ref PinpointProjectId
 
 Resources:
   PinpointProject:
     Type: AWS::Pinpoint::App
+    Condition: NeedsPinpointProjectId
     Properties:
       Name: !Ref PinpointProjectName
-
-  PinpointProjectEmailChannel:
-    Type: AWS::Pinpoint::EmailChannel
-    Properties:
-      ApplicationId: !Ref PinpointProject
-      ConfigurationSet: !Ref ConfigSet
-      Enabled: true
-      FromAddress: !Ref EmailFromAddress
-      Identity: !Ref EmailIdentityArn
-      RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/service-role/pinpoint-events"
 
 
   ##### S3 BUCKETS
@@ -112,246 +104,23 @@ Resources:
             StringEquals:
               "s3:x-amz-acl": "bucket-owner-full-control"
 
-
-  #### KINESIS FIREHOSE - SES
-  #######################################
-
-  EventSendFirehose:
-    Type: AWS::KinesisFirehose::DeliveryStream
-    Properties:
-      DeliveryStreamType: "DirectPut"
-      ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
-        BufferingHints:
-          IntervalInSeconds: 300
-          SizeInMBs: 5
-        CompressionFormat: "UNCOMPRESSED"
-        Prefix: "events/email_send/"
-        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
-
-  EventBounceFirehose:
-    Type: AWS::KinesisFirehose::DeliveryStream
-    Properties:
-      DeliveryStreamType: "DirectPut"
-      ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
-        BufferingHints:
-          IntervalInSeconds: 300
-          SizeInMBs: 5
-        CompressionFormat: "UNCOMPRESSED"
-        Prefix: "events/email_bounce/"
-        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
-
-  EventComplaintFirehose:
-    Type: AWS::KinesisFirehose::DeliveryStream
-    Properties:
-      DeliveryStreamType: "DirectPut"
-      ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
-        BufferingHints:
-          IntervalInSeconds: 300
-          SizeInMBs: 5
-        CompressionFormat: "UNCOMPRESSED"
-        Prefix: "events/email_complaint/"
-        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
-
-  EventDeliveryFirehose:
-    Type: AWS::KinesisFirehose::DeliveryStream
-    Properties:
-      DeliveryStreamType: "DirectPut"
-      ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
-        BufferingHints:
-          IntervalInSeconds: 300
-          SizeInMBs: 5
-        CompressionFormat: "UNCOMPRESSED"
-        Prefix: "events/email_delivery/"
-        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
-
-  EventOpenFirehose:
-    Type: AWS::KinesisFirehose::DeliveryStream
-    Properties:
-      DeliveryStreamType: "DirectPut"
-      ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
-        BufferingHints:
-          IntervalInSeconds: 300
-          SizeInMBs: 5
-        CompressionFormat: "UNCOMPRESSED"
-        Prefix: "events/email_open/"
-        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
-
-  EventClickFirehose:
-    Type: AWS::KinesisFirehose::DeliveryStream
-    Properties:
-      DeliveryStreamType: "DirectPut"
-      ExtendedS3DestinationConfiguration:
-        BucketARN: !Sub "arn:aws:s3:::${DataS3Bucket}"
-        BufferingHints:
-          IntervalInSeconds: 300
-          SizeInMBs: 5
-        CompressionFormat: "UNCOMPRESSED"
-        Prefix: "events/email_click/"
-        RoleARN: !GetAtt SESKinesisFirehoseRole.Arn
-
-  SESKinesisFirehoseRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - firehose.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      Path: "/"
-      Policies:
-        -
-          PolicyName: "root"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              -
-                Effect: "Allow"
-                Action:
-                  - "s3:AbortMultipartUpload"
-                  - "s3:GetBucketLocation"
-                  - "s3:GetObject"
-                  - "s3:ListBucket"
-                  - "s3:ListBucketMultipartUploads"
-                  - "s3:PutObject"
-                Resource:
-                  - !Sub "arn:aws:s3:::${EventS3BucketName}*"
-                  - !Sub "arn:aws:s3:::${EventS3BucketName}"
-              -
-                Effect: "Allow"
-                Action: "logs:PutLogEvents"
-                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/kinesisfirehose/*:log-stream:*"
-
+##### SES Configuration
+#######################################
 
   ConfigSet:
     Type: AWS::SES::ConfigurationSet
     Properties:
       Name: !Ref ConfigurationSetName
 
-  ConfigSetEventSendDestination:
-    Type: AWS::SES::ConfigurationSetEventDestination
-    Properties:
-      ConfigurationSetName: !Ref ConfigSet
-      EventDestination:
-        Enabled: true
-        KinesisFirehoseDestination:
-          DeliveryStreamARN: !GetAtt EventSendFirehose.Arn
-          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
-        MatchingEventTypes:
-          - "send"
-
-  ConfigSetEventBounceDestination:
-    Type: AWS::SES::ConfigurationSetEventDestination
-    DependsOn: ConfigSetEventSendDestination
-    Properties:
-      ConfigurationSetName: !Ref ConfigSet
-      EventDestination:
-        Enabled: true
-        KinesisFirehoseDestination:
-          DeliveryStreamARN: !GetAtt EventBounceFirehose.Arn
-          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
-        MatchingEventTypes:
-          - "bounce"
-
-  ConfigSetEventComplaintDestination:
-    Type: AWS::SES::ConfigurationSetEventDestination
-    DependsOn: ConfigSetEventBounceDestination
-    Properties:
-      ConfigurationSetName: !Ref ConfigSet
-      EventDestination:
-        Enabled: true
-        KinesisFirehoseDestination:
-          DeliveryStreamARN: !GetAtt EventComplaintFirehose.Arn
-          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
-        MatchingEventTypes:
-          - "complaint"
-
-  ConfigSetEventDeliveryDestination:
-    Type: AWS::SES::ConfigurationSetEventDestination
-    DependsOn: ConfigSetEventComplaintDestination
-    Properties:
-      ConfigurationSetName: !Ref ConfigSet
-      EventDestination:
-        Enabled: true
-        KinesisFirehoseDestination:
-          DeliveryStreamARN: !GetAtt EventDeliveryFirehose.Arn
-          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
-        MatchingEventTypes:
-          - "delivery"
-
-  ConfigSetEventOpenDestination:
-    Type: AWS::SES::ConfigurationSetEventDestination
-    DependsOn: ConfigSetEventDeliveryDestination
-    Properties:
-      ConfigurationSetName: !Ref ConfigSet
-      EventDestination:
-        Enabled: true
-        KinesisFirehoseDestination:
-          DeliveryStreamARN: !GetAtt EventOpenFirehose.Arn
-          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
-        MatchingEventTypes:
-          - "open"
-
-  ConfigSetEventClickDestination:
-    Type: AWS::SES::ConfigurationSetEventDestination
-    DependsOn: ConfigSetEventOpenDestination
-    Properties:
-      ConfigurationSetName: !Ref ConfigSet
-      EventDestination:
-        Enabled: true
-        KinesisFirehoseDestination:
-          DeliveryStreamARN: !GetAtt EventClickFirehose.Arn
-          IAMRoleARN: !GetAtt ConfigSetKinesisStreamRole.Arn
-        MatchingEventTypes:
-          - "click"
-
-  ConfigSetKinesisStreamRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ses.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      Path: "/"
-      Policies:
-        -
-          PolicyName: "root"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              -
-                Effect: "Allow"
-                Action:
-                  - "firehose:PutRecordBatch"
-                  - "firehose:DescribeDeliveryStream"
-                Resource:
-                  - !GetAtt EventSendFirehose.Arn
-                  - !GetAtt EventBounceFirehose.Arn
-                  - !GetAtt EventComplaintFirehose.Arn
-                  - !GetAtt EventDeliveryFirehose.Arn
-                  - !GetAtt EventOpenFirehose.Arn
-                  - !GetAtt EventClickFirehose.Arn
-
-
   #### KINESIS FIREHOSE - Pinpoint
   #######################################
   PinpointEventStream:
     Type: AWS::Pinpoint::EventStream
     Properties:
-      ApplicationId: !Ref PinpointProject
+      ApplicationId: !If
+        - NeedsPinpointProjectId
+        - !Ref PinpointProject
+        - !Ref PinpointProjectId
       DestinationStreamArn: !GetAtt PinpointEventFirehose.Arn
       RoleArn: !GetAtt PinpointKinesisStreamRole.Arn
 
@@ -365,7 +134,7 @@ Resources:
           IntervalInSeconds: 300
           SizeInMBs: 5
         CompressionFormat: "UNCOMPRESSED"
-        Prefix: "events/sms/"
+        Prefix: "events/"
         RoleARN: !GetAtt PinpointKinesisFirehoseRole.Arn
         ProcessingConfiguration:
           Enabled: TRUE
@@ -409,8 +178,7 @@ Resources:
                   const decoded = JSON.parse(Buffer.from(record.data, 'base64').toString('ascii'));
 
                   // Filter out Test Messages
-                  // Filter out email messages since those are coming from SES Configuration Set
-                  if (decoded.event_type === '_test.event_stream' || decoded.event_type.startsWith('_email.')) {
+                  if (decoded.event_type === '_test.event_stream') {
                     output.push({
                       data: record.data,
                       recordId: record.recordId,
@@ -419,12 +187,8 @@ Resources:
 
                   } else {
 
-                    // Trim off millisecond precision
-                    decoded.arrival_timestamp = Math.round(decoded.arrival_timestamp / 1000);
-                    decoded.event_timestamp = Math.round(decoded.event_timestamp / 1000);
-
                     output.push({
-                      // Add a linebreak for easier Glue crawling
+                      // Add a linebreak for easier athena parsing
                       data: Buffer.from(JSON.stringify(decoded) + '\n').toString('base64'),
                       recordId: record.recordId,
                       result: 'Ok'
@@ -546,7 +310,7 @@ Resources:
 
 
 
-  #### GLUE CRAWLER
+  #### GLUE AND ATHENA
   #######################################
   PinpointEventDatabase:
     Type: AWS::Glue::Database
@@ -556,210 +320,488 @@ Resources:
         Name: !Ref EventAthenaDatabaseName
         Description: "SES and Pinpoint Streaming Event Database"
 
+
+  EventTableAllNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create a Table for All events"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `all_events` (
+              event_type string,
+              event_timestamp bigint,
+              arrival_timestamp bigint,
+              event_version string,
+              application struct<app_id:string,sdk:map<string,string>>,
+              client struct<client_id:string,cognito_id:string>,
+              device struct<platform:map<string,string>>,
+              session map<string,string>,
+              attributes map<string,string>,
+              awsAccountId string,
+              facets struct<
+                email_channel:struct<
+                  mail_event:struct<
+                    mail:struct<
+                      message_id:string,
+                      message_send_timestamp:bigint,
+                      from_address:string,
+                      destination:array<string>,
+                      headers_truncated:boolean,
+                      headers:array<map<string,string>>,
+                      common_headers:struct<
+                        `from`:string,
+                        to:array<string>,
+                        subject:string
+                      >
+                    >,
+                    send:map<string,string>,
+                    delivery:struct<
+                      smtp_response:string,
+                      reporting_mta:string,
+                      recipients:array<string>,
+                      processing_time_millis:int
+                    >,
+                    `open`:struct<
+                      `ip_address`:string,
+                      `user_agent`:string
+                    >,
+                    `click`:struct<
+                      `ip_address`:string,
+                      `user_agent`:string,
+                      `link`:string,
+                      `link_tags`:struct<
+                        `unsubscribeLinkTag`:array<string>
+                      >
+                    >,
+                    reject:struct<
+                      reason:string
+                    >,
+                    complaint:struct<
+                      complained_recipients:array<struct<email_address:string>>,
+                      feedback_id:string,
+                      user_agent:string,
+                      complaint_feedback_type:string
+                    >,
+                    `bounce`:struct<
+                      bounce_type:string,
+                      bounce_sub_type:string,
+                      bounced_recipients:array<struct<email_address:string,`action`:string,`status`:string,diagnostic_code:string>>,
+                      feedback_id:string,
+                      reporting_mta:string
+                    >,
+                    reject:struct<reason:string>
+
+                  >
+                >
+              >,
+              metrics struct<price_in_millicents_usd:double>
+            )
+            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+            WITH SERDEPROPERTIES (
+            'serialization.format' = '1'
+            ) LOCATION 's3://${DataS3Bucket}/events/'
+            TBLPROPERTIES ('has_encrypted_data'='false');
+
   EventTableSendNamedQuery:
     Type: AWS::Athena::NamedQuery
     DeletionPolicy: Delete
     Properties:
       Database: !Ref PinpointEventDatabase
-      Description: "Create the Email Send Data Lake Table"
+      Description: "Create the Email Send View"
       QueryString:
         !Sub
           |
-            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_send (
-              mail struct<`timestamp`:string,
-                          source:string,
-                          sourceArn:string,
-                          sendingAccountId:string,
-                          messageId:string,
-                          destination:string,
-                          headersTruncated:boolean,
-                          headers:array<struct<name:string,value:string>>,
-                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
-                          >
-              )
-            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-            LOCATION 's3://${DataS3Bucket}/events/email_send/'
+            CREATE OR REPLACE VIEW email_send AS
+            SELECT
+                from_unixtime((event_timestamp / 1000)) event_timestamp
+              , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+              , application.app_id application_id
+              , client.client_id endpoint_id
+              , attributes['campaign_id'] pinpoint_campaign_id
+              , attributes['treament_id'] pinpoint_treatment_id
+              , awsaccountid
+              , facets.email_channel.mail_event.mail.message_id message_id
+              , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+              , facets.email_channel.mail_event.mail.from_address from_address
+              , facets.email_channel.mail_event.mail.destination destination
+              , facets.email_channel.mail_event.mail.common_headers.subject as subject
+              , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_email.send')
 
-  EventTableBounceNamedQuery:
+
+  EventTableHardBounceNamedQuery:
     Type: AWS::Athena::NamedQuery
     DeletionPolicy: Delete
     Properties:
       Database: !Ref PinpointEventDatabase
-      Description: "Create the Email Bounce Data Lake Table"
+      Description: "Create the Email Hard Bounce View"
       QueryString:
         !Sub
           |
-            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_bounce (
-              bounce struct<bounceType:string,
-                          bounceSubType:string,
-                          bouncedRecipients:array<struct<emailAddress:string,action:string,status:string,diagnosticCode:string>>,
-                          `timestamp`:string,
-                          feedbackId:string,
-                          reportingMTA:string>,
-              mail struct<`timestamp`:string,
-                          source:string,
-                          sourceArn:string,
-                          sendingAccountId:string,
-                          messageId:string,
-                          destination:string,
-                          headersTruncated:boolean,
-                          headers:array<struct<name:string,value:string>>,
-                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
-                          >
-              )
-            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-            LOCATION 's3://${DataS3Bucket}/events/email_bounce/'
+            CREATE OR REPLACE VIEW email_hardbounce AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , facets.email_channel.mail_event.bounce.bounce_type as bounce_type
+            , facets.email_channel.mail_event.bounce.bounce_sub_type as bounce_sub_type
+            , facets.email_channel.mail_event.bounce.feedback_id as feedback_id
+            , facets.email_channel.mail_event.bounce.reporting_mta as reporting_mta
+            , bounced_recipient.email_address as bounced_recipient_email_address
+            , bounced_recipient.action as bounced_recipient_action
+            , bounced_recipient.status as bounced_recipient_status
+            , bounced_recipient.diagnostic_code as bounced_recipient_diagnostic_code
+            , attributes as attributes_map
+            FROM
+              all_events
+              CROSS JOIN UNNEST(facets.email_channel.mail_event.bounce.bounced_recipients) as t(bounced_recipient)
+            WHERE (event_type = '_email.hardbounce')
+
+  EventTableSoftBounceNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Soft Bounce View"
+      QueryString:
+        !Sub
+          |
+            CREATE OR REPLACE VIEW email_softbounce AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , facets.email_channel.mail_event.bounce.bounce_type as bounce_type
+            , facets.email_channel.mail_event.bounce.bounce_sub_type as bounce_sub_type
+            , facets.email_channel.mail_event.bounce.feedback_id as feedback_id
+            , facets.email_channel.mail_event.bounce.reporting_mta as reporting_mta
+            , bounced_recipient.email_address as bounced_recipient_email_address
+            , bounced_recipient.action as bounced_recipient_action
+            , bounced_recipient.status as bounced_recipient_status
+            , bounced_recipient.diagnostic_code as bounced_recipient_diagnostic_code
+            , attributes as attributes_map
+            FROM
+              all_events
+              CROSS JOIN UNNEST(facets.email_channel.mail_event.bounce.bounced_recipients) as t(bounced_recipient)
+            WHERE (event_type = '_email.softbounce')
 
   EventTableComplaintNamedQuery:
     Type: AWS::Athena::NamedQuery
     DeletionPolicy: Delete
     Properties:
       Database: !Ref PinpointEventDatabase
-      Description: "Create the Email Complaint Data Lake Table"
+      Description: "Create the Email Complaint View"
       QueryString:
         !Sub
           |
-            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_complaint (
-              complaint struct<
-                          complaintSubType:string,
-                          complainedRecipients:array<struct<emailAddress:string>>,
-                          `timestamp`:string,
-                          feedbackId:string,
-                          userAgent:string,
-                          complaintFeedbackType:string,
-                          arrivalDate:string>,
-              mail struct<`timestamp`:string,
-                          source:string,
-                          sourceArn:string,
-                          sendingAccountId:string,
-                          messageId:string,
-                          destination:string,
-                          headersTruncated:boolean,
-                          headers:array<struct<name:string,value:string>>,
-                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
-                          >
-              )
-            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-            LOCATION 's3://${DataS3Bucket}/events/email_complaint/'
+            CREATE OR REPLACE VIEW email_complaint AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , complained_recipient.email_address as complained_email_address
+            , facets.email_channel.mail_event.complaint.feedback_id as feedback_id
+            , facets.email_channel.mail_event.complaint.user_agent as user_agent
+            , facets.email_channel.mail_event.complaint.complaint_feedback_type as complaint_feedback_type
+            , attributes as attributes_map
+            FROM
+              all_events
+              CROSS JOIN UNNEST(facets.email_channel.mail_event.complaint.complained_recipients) as t(complained_recipient)
+            WHERE (event_type = '_email.complaint')
 
   EventTableDeliveryNamedQuery:
     Type: AWS::Athena::NamedQuery
     DeletionPolicy: Delete
     Properties:
       Database: !Ref PinpointEventDatabase
-      Description: "Create the Email Delivery Data Lake Table"
+      Description: "Create the Email Delivered View"
       QueryString:
         !Sub
           |
-            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_delivery (
-              delivery struct<
-                          `timestamp`:string,
-                          processingTimeMillis:int,
-                          recipients:array<string>,
-                          smtpResponse:string,
-                          reportingMTA:string>,
-              mail struct<`timestamp`:string,
-                          source:string,
-                          sourceArn:string,
-                          sendingAccountId:string,
-                          messageId:string,
-                          destination:string,
-                          headersTruncated:boolean,
-                          headers:array<struct<name:string,value:string>>,
-                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
-                          >
-              )
-            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-            LOCATION 's3://${DataS3Bucket}/events/email_delivery/'
+            CREATE OR REPLACE VIEW email_delivered AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , facets.email_channel.mail_event.mail.common_headers.subject as subject
+            , facets.email_channel.mail_event.delivery.smtp_response as smtp_response
+            , facets.email_channel.mail_event.delivery.reporting_mta as reporting_mta
+            , facets.email_channel.mail_event.delivery.recipients as recipients
+            , facets.email_channel.mail_event.delivery.processing_time_millis as processing_time_millis
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_email.delivered')
 
   EventTableOpenNamedQuery:
     Type: AWS::Athena::NamedQuery
     DeletionPolicy: Delete
     Properties:
       Database: !Ref PinpointEventDatabase
-      Description: "Create the Email Open Data Lake Table"
+      Description: "Create the Email Open View"
       QueryString:
         !Sub
           |
-            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_open (
-              open struct<
-                          `timestamp`:string,
-                          userAgent:string,
-                          ipAddress:string>,
-              mail struct<`timestamp`:string,
-                          source:string,
-                          sourceArn:string,
-                          sendingAccountId:string,
-                          messageId:string,
-                          destination:string,
-                          headersTruncated:boolean,
-                          headers:array<struct<name:string,value:string>>,
-                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
-                          >
-              )
-            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-            LOCATION 's3://${DataS3Bucket}/events/email_open/'
+            CREATE OR REPLACE VIEW email_open AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , facets.email_channel.mail_event.mail.common_headers.subject as subject
+            , facets.email_channel.mail_event.open.ip_address as ip_address
+            , facets.email_channel.mail_event.open.user_agent as user_agent
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_email.open')
 
   EventTableClickNamedQuery:
     Type: AWS::Athena::NamedQuery
     DeletionPolicy: Delete
     Properties:
       Database: !Ref PinpointEventDatabase
-      Description: "Create the Email Click Data Lake Table"
+      Description: "Create the Email Click View"
       QueryString:
         !Sub
           |
-            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.email_click (
-              click struct<
-                          `timestamp`:string,
-                          ipAddress:string,
-                          userAgent:string,
-                          link:string>,
-              mail struct<`timestamp`:string,
-                          source:string,
-                          sourceArn:string,
-                          sendingAccountId:string,
-                          messageId:string,
-                          destination:string,
-                          headersTruncated:boolean,
-                          headers:array<struct<name:string,value:string>>,
-                          commonHeaders:struct<`from`:array<string>,to:array<string>,messageId:string,subject:string>
-                          >
-              )
-            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-            LOCATION 's3://${DataS3Bucket}/events/email_click/'
+            CREATE OR REPLACE VIEW email_click AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , facets.email_channel.mail_event.mail.common_headers.subject as subject
+            , facets.email_channel.mail_event.click.ip_address as ip_address
+            , facets.email_channel.mail_event.click.user_agent as user_agent
+            , facets.email_channel.mail_event.click.link as link
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_email.click')
 
-  EventTableSMSNamedQuery:
+  EventTableUnsubNamedQuery:
     Type: AWS::Athena::NamedQuery
     DeletionPolicy: Delete
     Properties:
       Database: !Ref PinpointEventDatabase
-      Description: "Create the SMS Data Lake Table"
+      Description: "Create the Email Unsub View"
       QueryString:
         !Sub
           |
-            CREATE EXTERNAL TABLE IF NOT EXISTS `${PinpointEventDatabase}`.sms (
-              event_type string,
-              event_timestamp timestamp,
-              arrival_timestamp timestamp,
-              application struct<app_id:string>,
-              client struct<client_id:string>,
-              attributes struct<
-                  campaign_id:string,
-                  sender_request_id:string,
-                  destination_phone_number:string,
-                  record_status:string,
-                  iso_country_code:string,
-                  mcc_mnc:string,
-                  number_of_message_parts:string,
-                  message_id:string,
-                  message_type:string,
-                  origination_phone_number:string
-                >,
-              metrics struct<price_in_millicents_usd:int>
-              )
-            ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-            LOCATION 's3://${DataS3Bucket}/events/sms/'
+            CREATE OR REPLACE VIEW email_unsubscribe AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , facets.email_channel.mail_event.mail.common_headers.subject as subject
+            , facets.email_channel.mail_event.click.ip_address as ip_address
+            , facets.email_channel.mail_event.click.user_agent as user_agent
+            , facets.email_channel.mail_event.click.link as link
+            , facets.email_channel.mail_event.click.link_tags.unsubscribeLinkTag
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_email.unsubscribe')
+
+  EventTableRejectNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Email Reject View"
+      QueryString:
+        !Sub
+          |
+            CREATE OR REPLACE VIEW email_rejected AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , facets.email_channel.mail_event.mail.message_id message_id
+            , from_unixtime((facets.email_channel.mail_event.mail.message_send_timestamp / 1000)) message_send_timestamp
+            , facets.email_channel.mail_event.mail.from_address from_address
+            , facets.email_channel.mail_event.mail.destination destination
+            , facets.email_channel.mail_event.mail.common_headers.subject as subject
+            , facets.email_channel.mail_event.reject.reason as reject_reason
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_email.rejected')
+
+  EventTableSMSBufferedNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the SMS Buffered View"
+      QueryString:
+        !Sub
+          |
+            CREATE OR REPLACE VIEW sms_buffered AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , attributes['sender_request_id'] as sender_request_id
+            , attributes['destination_phone_number'] as destination_phone_number
+            , attributes['record_status'] as record_status
+            , attributes['iso_country_code'] as iso_country_code
+            , attributes['number_of_message_parts'] as number_of_message_parts
+            , attributes['message_id'] as message_id
+            , attributes['message_type'] as message_type
+            , metrics.price_in_millicents_usd as price_in_millicents_usd
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_SMS.BUFFERED')
+
+  EventTableSMSSuccessNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the SMS Success View"
+      QueryString:
+        !Sub
+          |
+            CREATE OR REPLACE VIEW sms_success AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , attributes['sender_request_id'] as sender_request_id
+            , attributes['destination_phone_number'] as destination_phone_number
+            , attributes['record_status'] as record_status
+            , attributes['iso_country_code'] as iso_country_code
+            , attributes['number_of_message_parts'] as number_of_message_parts
+            , attributes['message_id'] as message_id
+            , attributes['message_type'] as message_type
+            , attributes['origination_phone_number'] as origination_phone_number
+            , metrics.price_in_millicents_usd as price_in_millicents_usd
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_SMS.SUCCESS')
+
+  EventTableCampaignSendNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Campaign Send View"
+      QueryString:
+        !Sub
+          |
+            CREATE OR REPLACE VIEW campaign_send AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['campaign_id'] pinpoint_campaign_id
+            , attributes['treament_id'] pinpoint_treatment_id
+            , awsaccountid
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_campaign.send')
+
+  EventTableJourneySendNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointEventDatabase
+      Description: "Create the Journey Send View"
+      QueryString:
+        !Sub
+          |
+            CREATE OR REPLACE VIEW journey_send AS
+            SELECT
+              from_unixtime((event_timestamp / 1000)) event_timestamp
+            , from_unixtime((arrival_timestamp / 1000)) arrival_timestamp
+            , application.app_id application_id
+            , client.client_id endpoint_id
+            , attributes['journey_run_id'] journey_run_id
+            , attributes['journey_send_status'] journey_send_status
+            , attributes['journey_id'] journey_id
+            , attributes['journey_activity_id'] journey_activity_id
+            , awsaccountid
+            , attributes as attributes_map
+            FROM
+              all_events
+            WHERE (event_type = '_journey.send')
 
   ### Deployment Helper
   SetupSampleFiles:
@@ -774,13 +816,24 @@ Resources:
       Environment:
         Variables:
           S3_DATA_BUCKET: !Ref DataS3Bucket
-          EMAIL_SEND_NAMED_QUERY: !Ref EventTableSendNamedQuery
-          EMAIL_BOUNCE_NAMED_QUERY: !Ref EventTableBounceNamedQuery
-          EMAIL_COMPLAINT_NAMED_QUERY: !Ref EventTableComplaintNamedQuery
-          EMAIL_DELIVERY_NAMED_QUERY: !Ref EventTableDeliveryNamedQuery
-          EMAIL_OPEN_NAMED_QUERY: !Ref EventTableOpenNamedQuery
-          EMAIL_CLICK_NAMED_QUERY: !Ref EventTableClickNamedQuery
-          SMS_NAMED_QUERY: !Ref EventTableSMSNamedQuery
+          CONFIG_SET_NAME: !Ref ConfigurationSetName
+          ALL_EVENT_TABLE: !Ref EventTableAllNamedQuery
+          SEND_NQ: !Ref EventTableSendNamedQuery
+          HARD_BOUNCE_NQ: !Ref EventTableHardBounceNamedQuery
+          SOFT_BOUNCE_NQ: !Ref EventTableSoftBounceNamedQuery
+          COMPLAINT_NQ: !Ref EventTableComplaintNamedQuery
+          DELIVERY_NQ: !Ref EventTableDeliveryNamedQuery
+          OPEN_NQ: !Ref EventTableOpenNamedQuery
+          CLICK_NQ: !Ref EventTableClickNamedQuery
+          UNSUB_NQ: !Ref EventTableUnsubNamedQuery
+          REJECT_NQ: !Ref EventTableRejectNamedQuery
+          SMS_BUFF_NQ: !Ref EventTableSMSBufferedNamedQuery
+          SMS_SUCCESS_NQ: !Ref EventTableSMSSuccessNamedQuery
+          CAMPAIGN_SEND_NQ: !Ref EventTableCampaignSendNamedQuery
+          JOURNEY_SEND_NQ: !Ref EventTableJourneySendNamedQuery
+          PINPOINT_PROJECT_ARN: !Sub
+            - 'arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${ProjectId}'
+            - {ProjectId: !If [NeedsPinpointProjectId, !Ref PinpointProject, !Ref PinpointProjectId] }
       Description: Helps set up the Optimize Amazon Personalize Campaigns using Amazon Pinpoint Events solution.
       Handler: index.handler
       MemorySize: 256
@@ -791,86 +844,65 @@ Resources:
         ZipFile: |
           const AWS = require('aws-sdk');
           const https = require("https");
-          const stream = require('stream');
           const url = require('url');
-          const crypto = require("crypto");
-
+          const p = process.env;
           AWS.config.update({
-            region: process.env.AWS_REGION
+            region: p.AWS_REGION
           });
 
           const athena = new AWS.Athena();
+          const sesv2 = new AWS.SESV2();
 
-          const uuidv4 = function() {
-            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-              (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-            );
-          };
+          const rnq = function(namedQueries) {
+          console.log(namedQueries);
+          return athena.batchGetNamedQuery({NamedQueryIds: namedQueries}).promise()
+            .then((data) => {
 
-          const runNamedQuery = function(namedQuery) {
-            return athena.getNamedQuery({NamedQueryId: namedQuery}).promise()
-              .then((data) => {
-
+              return data.NamedQueries.reduce((pr, q) => {
+                
                 const params = {
-                  QueryString: data.NamedQuery.QueryString,
+                  QueryString: q.QueryString,
+                  QueryExecutionContext: {
+                    Database: q.Database
+                  },
                   ResultConfiguration: {
-                    OutputLocation: `s3://${process.env.S3_DATA_BUCKET}/temp/`
+                    OutputLocation: `s3://${p.S3_DATA_BUCKET}/temp/`
                   }
                 };
+                return pr.then(() => athena.startQueryExecution(params).promise());
+              }, Promise.resolve());
 
-                return athena.startQueryExecution(params).promise()
-                  .catch((err) => {
-                    console.error('Encountered Error calling startQueryExecution with parameters: ' + JSON.stringify(params) + ', error: ' + JSON.stringify(err));
-                    return Promise.reject(err);
-                  })
-              });
+            });
+          }
+
+          const setPED = function() {
+            return sesv2.createConfigurationSetEventDestination({
+              ConfigurationSetName: p.CONFIG_SET_NAME,
+              EventDestination: {
+                Enabled: true ,
+                MatchingEventTypes: [
+                  'SEND','REJECT','BOUNCE','COMPLAINT','DELIVERY','OPEN','CLICK','RENDERING_FAILURE'
+                ],
+                PinpointDestination: {ApplicationArn: p.PINPOINT_PROJECT_ARN}
+              },
+              EventDestinationName: 'pinpoint'
+            }).promise();
           }
 
           exports.handler = (event, context, callback) => {
-
-            let responseStatus = 'FAILED';
-            let responseData = {};
-
-            if (event.ResourceProperties.CustomResourceAction === 'GenerateUUID') {
-
-                responseStatus = 'SUCCESS';
-                responseData = {
-                    UUID: uuidv4()
-                };
-                sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
-
-            } else if (event.ResourceProperties.CustomResourceAction === 'SetupSampleFiles') {
-
-
-
-              Promise.all([
-                        runNamedQuery(process.env.EMAIL_SEND_NAMED_QUERY),
-                        runNamedQuery(process.env.EMAIL_BOUNCE_NAMED_QUERY),
-                        runNamedQuery(process.env.EMAIL_COMPLAINT_NAMED_QUERY),
-                        runNamedQuery(process.env.EMAIL_DELIVERY_NAMED_QUERY),
-                        runNamedQuery(process.env.EMAIL_OPEN_NAMED_QUERY),
-                        runNamedQuery(process.env.EMAIL_CLICK_NAMED_QUERY),
-                        runNamedQuery(process.env.SMS_NAMED_QUERY)
-                    ])
-                    .then((results) => {
-                      responseStatus = 'SUCCESS';
-                      responseData = {
-                          success: true
-                      };
-                      sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
-
-                    })
-                    .catch((results) => {
-
-                      console.log('Received Error: ' + JSON.stringify(results));
-
-                      responseStatus = 'FAILED';
-                      responseData = {
-                          success: false
-                      };
-                      sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
-
-                    });
+            if (event.ResourceProperties.CustomResourceAction === 'SetupSampleFiles') {
+              return Promise.all([
+                    rnq([p.ALL_EVENT_TABLE, p.SEND_NQ, p.HARD_BOUNCE_NQ, p.SOFT_BOUNCE_NQ, p.COMPLAINT_NQ,
+                        p.DELIVERY_NQ, p.OPEN_NQ, p.CLICK_NQ, p.UNSUB_NQ, p.REJECT_NQ, p.SMS_BUFF_NQ,
+                        p.SMS_SUCCESS_NQ, p.CAMPAIGN_SEND_NQ, p.JOURNEY_SEND_NQ]),
+                    setPED()
+                ])
+                .then((results) => {
+                  return sendResponse(event, callback, context.logStreamName, 'SUCCESS', {success: true});
+                })
+                .catch((results) => {
+                  return sendResponse(event, callback, context.logStreamName, 'FAILED', {success: false});
+                });
             }
           };
 
@@ -878,42 +910,38 @@ Resources:
           * Sends a response to the pre-signed S3 URL
           */
           let sendResponse = function(event, callback, logStreamName, responseStatus, responseData) {
-            const responseBody = JSON.stringify({
-                Status: responseStatus,
-                Reason: `See the details in CloudWatch Log Stream: ${logStreamName}`,
-                PhysicalResourceId: logStreamName,
-                StackId: event.StackId,
-                RequestId: event.RequestId,
-                LogicalResourceId: event.LogicalResourceId,
-                Data: responseData,
+            return new Promise((resolve, reject) => {
+              try {
+                const responseBody = JSON.stringify({
+                    Status: responseStatus,
+                    Reason: `See the details in CloudWatch Log Stream: ${logStreamName}`,
+                    PhysicalResourceId: logStreamName,
+                    StackId: event.StackId,
+                    RequestId: event.RequestId,
+                    LogicalResourceId: event.LogicalResourceId,
+                    Data: responseData,
+                });
+                const parsedUrl = url.parse(event.ResponseURL);
+                const options = {
+                    hostname: parsedUrl.hostname,
+                    port: 443,
+                    path: parsedUrl.path,
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': '',
+                        'Content-Length': responseBody.length,
+                    }
+                };
+                const req = https.request(options, (res) => {
+                    resolve('Successfully sent stack response!');
+                });
+                req.on('error', (err) => {reject(err);});
+                req.write(responseBody);
+                req.end();
+              } catch(err) {
+                reject(err);
+              }
             });
-
-            console.log('RESPONSE BODY:\n', responseBody);
-            const parsedUrl = url.parse(event.ResponseURL);
-            const options = {
-                hostname: parsedUrl.hostname,
-                port: 443,
-                path: parsedUrl.path,
-                method: 'PUT',
-                headers: {
-                    'Content-Type': '',
-                    'Content-Length': responseBody.length,
-                }
-            };
-
-            const req = https.request(options, (res) => {
-                console.log('STATUS:', res.statusCode);
-                console.log('HEADERS:', JSON.stringify(res.headers));
-                callback(null, 'Successfully sent stack response!');
-            });
-
-            req.on('error', (err) => {
-                console.log('sendResponse Error:\n', err);
-                callback(err);
-            });
-
-            req.write(responseBody);
-            req.end();
           };
 
 
@@ -963,6 +991,7 @@ Resources:
                 Action:
                   - "athena:StartQueryExecution"
                   - "athena:GetNamedQuery"
+                  - "athena:BatchGetNamedQuery"
                 Resource: !Sub "arn:aws:athena:${AWS::Region}:${AWS::AccountId}:workgroup/*"
               -
                 Effect: "Allow"
@@ -978,3 +1007,9 @@ Resources:
                   - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${PinpointEventDatabase}/*"
                   - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${PinpointEventDatabase}"
                   - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              -
+                Effect: "Allow"
+                Action:
+                  - ses:CreateConfigurationSetEventDestination
+                  - mobiletargeting:GetApp
+                Resource: "*"
