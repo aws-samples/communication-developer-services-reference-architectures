@@ -340,6 +340,7 @@ Resources:
               device struct<platform:map<string,string>>,
               session map<string,string>,
               attributes map<string,string>,
+              client_context struct<custom:map<string,string>>,
               awsAccountId string,
               facets struct<
                 email_channel:struct<
@@ -428,6 +429,7 @@ Resources:
               , facets.email_channel.mail_event.mail.from_address from_address
               , facets.email_channel.mail_event.mail.destination destination
               , facets.email_channel.mail_event.mail.common_headers.subject as subject
+              , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
               , attributes as attributes_map
             FROM
               all_events
@@ -464,6 +466,7 @@ Resources:
             , bounced_recipient.action as bounced_recipient_action
             , bounced_recipient.status as bounced_recipient_status
             , bounced_recipient.diagnostic_code as bounced_recipient_diagnostic_code
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -500,6 +503,7 @@ Resources:
             , bounced_recipient.action as bounced_recipient_action
             , bounced_recipient.status as bounced_recipient_status
             , bounced_recipient.diagnostic_code as bounced_recipient_diagnostic_code
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -532,6 +536,7 @@ Resources:
             , facets.email_channel.mail_event.complaint.feedback_id as feedback_id
             , facets.email_channel.mail_event.complaint.user_agent as user_agent
             , facets.email_channel.mail_event.complaint.complaint_feedback_type as complaint_feedback_type
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -565,6 +570,7 @@ Resources:
             , facets.email_channel.mail_event.delivery.reporting_mta as reporting_mta
             , facets.email_channel.mail_event.delivery.recipients as recipients
             , facets.email_channel.mail_event.delivery.processing_time_millis as processing_time_millis
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -595,6 +601,7 @@ Resources:
             , facets.email_channel.mail_event.mail.common_headers.subject as subject
             , facets.email_channel.mail_event.open.ip_address as ip_address
             , facets.email_channel.mail_event.open.user_agent as user_agent
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -626,6 +633,7 @@ Resources:
             , facets.email_channel.mail_event.click.ip_address as ip_address
             , facets.email_channel.mail_event.click.user_agent as user_agent
             , facets.email_channel.mail_event.click.link as link
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -658,6 +666,7 @@ Resources:
             , facets.email_channel.mail_event.click.user_agent as user_agent
             , facets.email_channel.mail_event.click.link as link
             , facets.email_channel.mail_event.click.link_tags.unsubscribeLinkTag
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -687,6 +696,7 @@ Resources:
             , facets.email_channel.mail_event.mail.destination destination
             , facets.email_channel.mail_event.mail.common_headers.subject as subject
             , facets.email_channel.mail_event.reject.reason as reject_reason
+            , MAP_CONCAT(COALESCE(client_context.custom, CAST(JSON '{}' AS MAP(varchar,varchar))),  attributes) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -718,7 +728,7 @@ Resources:
             , attributes['message_id'] as message_id
             , attributes['message_type'] as message_type
             , metrics.price_in_millicents_usd as price_in_millicents_usd
-            , CAST(JSON_PARSE(attributes['customer_context']) AS MAP(VARCHAR, VARCHAR)) as customer_context
+            , CAST(JSON_PARSE(attributes['customer_context']) AS MAP(VARCHAR, VARCHAR)) as context
             , attributes as attributes_map
             FROM
               all_events
@@ -751,7 +761,7 @@ Resources:
             , attributes['message_type'] as message_type
             , attributes['origination_phone_number'] as origination_phone_number
             , metrics.price_in_millicents_usd as price_in_millicents_usd
-            , CAST(JSON_PARSE(attributes['customer_context']) AS MAP(VARCHAR, VARCHAR)) as customer_context
+            , CAST(JSON_PARSE(attributes['customer_context']) AS MAP(VARCHAR, VARCHAR)) as context
             , attributes as attributes_map
             FROM
               all_events
