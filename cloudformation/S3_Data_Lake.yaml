@@ -718,6 +718,7 @@ Resources:
             , attributes['message_id'] as message_id
             , attributes['message_type'] as message_type
             , metrics.price_in_millicents_usd as price_in_millicents_usd
+            , CAST(JSON_PARSE(attributes['customer_context']) AS MAP(VARCHAR, VARCHAR)) as customer_context
             , attributes as attributes_map
             FROM
               all_events
@@ -750,6 +751,7 @@ Resources:
             , attributes['message_type'] as message_type
             , attributes['origination_phone_number'] as origination_phone_number
             , metrics.price_in_millicents_usd as price_in_millicents_usd
+            , CAST(JSON_PARSE(attributes['customer_context']) AS MAP(VARCHAR, VARCHAR)) as customer_context
             , attributes as attributes_map
             FROM
               all_events
@@ -859,7 +861,7 @@ Resources:
             .then((data) => {
 
               return data.NamedQueries.reduce((pr, q) => {
-                
+
                 const params = {
                   QueryString: q.QueryString,
                   QueryExecutionContext: {
