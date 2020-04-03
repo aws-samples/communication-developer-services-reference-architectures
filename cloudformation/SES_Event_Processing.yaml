@@ -29,6 +29,26 @@ Resources:
       Region: !Ref AWS::Region
       TopicArn: !Ref SESNotificationTopic
 
+  SESNotificationQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SESNotificationQueue
+      PolicyDocument:
+        Id: "PublishSNStoSQS"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal: "*"
+            Action:
+              - "sqs:SendMessage"
+            Resource: "*"
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref SESNotificationTopic
+
+
+
   LambdaFunctionEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     Properties:
@@ -74,7 +94,7 @@ Resources:
 
               for record in event['Records']:
                 try:
-                  ses_event = json.loads(record['body'])
+                  ses_event = json.loads(json.loads(record['body'])['Message'])
 
                   logging.info(ses_event)
 
@@ -96,7 +116,7 @@ Resources:
                           )
                           # CUSTOMER TODO - Update customer system with Complaint status
                 except Exception as e:
-                    logging.error("Received Error while processing s3 file: %s", e)
+                    logging.error("Received Error while processing SQS record: %s", e)
 
 
   SESNotificationProcessingLambdaRole:
