@@ -75,7 +75,7 @@ Since Pinpoint uses Amazon Simple Email Service to send all emails, we can rely 
 
 ------
 
-### Pinpoint S3 Data Lake
+### Pinpoint S3 Event Database
 
 #### Description
 
