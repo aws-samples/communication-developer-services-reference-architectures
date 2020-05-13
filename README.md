@@ -89,6 +89,7 @@ Ex: Get all Campaigns with Opens, Clicks, Hard Bounces, Soft Bounces, and Unsubs
 ```
 SELECT
   pinpoint_campaign_id,
+  (SELECT COUNT(*) FROM email_send WHERE email_send.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumSends,
   (SELECT COUNT(*) FROM email_open WHERE email_open.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumOpens,
   (SELECT COUNT(*) FROM email_click WHERE email_click.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumClicks,
   (SELECT COUNT(*) FROM email_hardbounce WHERE email_hardbounce.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumHardBounces,
@@ -96,7 +97,9 @@ SELECT
   (SELECT COUNT(*) FROM email_unsubscribe WHERE email_unsubscribe.pinpoint_campaign_id = campaign_send.pinpoint_campaign_id) AS NumUnsubs
 
 FROM campaign_send
+WHERE ingest_timestamp > current_timestamp - interval '30' day
 GROUP BY pinpoint_campaign_id
+
 
 ```
 
@@ -109,13 +112,14 @@ SELECT
 FROM email_send a
 LEFT JOIN email_open b
   ON a.message_id = b.message_id
-WHERE contains(a.destination, 'xxxx@example.com') AND a.event_timestamp >  current_timestamp - interval '30' day
-ORDER BY event_timestamp DESC
+WHERE contains(a.destination, 'example_address@example.com')
+  AND a.ingest_timestamp > current_timestamp - interval '30' day
+ORDER BY a.event_timestamp DESC
 ```
 
 #### Architecture Diagram
 
-![Screenshot](images/S3_Data_Lake.png)
+![Screenshot](images/EventDB_ArchDiagram.png)
 
 #### Use-Case
 
@@ -127,7 +131,7 @@ ORDER BY event_timestamp DESC
 * Machine Learning Training / Retraining
 
 #### AWS CloudFormation Link
-[CF Template](cloudformation/S3_Data_Lake.yaml)
+[CF Template](https://s3.amazonaws.com/solutions-reference/digital-user-engagement-events-database/v1.0.0/digital-user-engagement-events-database.template
 
 #### Documentation References
 
