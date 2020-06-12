@@ -1,0 +1,3 @@
+sms_number,message,external_campaign_id,short_code,message_type,id_1,id_2
++1[CUSTOMER_NUMBER_HERE],"Here is a long message, with a comma",12345,[SHORT_OR_LONG_CODE_HERE],TRANSACTIONAL,tracking 1, tracking2
++1[CUSTOMER_NUMBER_HERE],"Here is a long message, with a comma",12345,[SHORT_OR_LONG_CODE_HERE],TRANSACTIONAL,tracking 1, tracking2

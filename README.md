@@ -145,6 +145,38 @@ ORDER BY a.event_timestamp DESC
 
 ------
 
+### Pinpoint Message Archiver
+
+#### Description
+
+Many organizations need to keep records of messages sent to end-users.  Using the Pinpoint Event Stream, we are able to archive all Campaign and Journey messages reliably in Amazon S3 by re-rendering the message using the content provided.  
+
+The Architecture below shows how an Archiving solution could be built by attaching an AWS Lambda function to an existing Kinesis Firehose used as a Pinpoint Event Stream.  We configure the Lambda function to look for the `_campaign.send` and `_journey.send events` processing the archival asynchronously using Amazon Simple Queue Service.
+
+The result are MIME-typed files stored in Amazon S3 with the Key Prefix: /archive/[EndpointId]/[Year]/[Month]/[Day]/[Hour].  This allows for easy GDPR compliance by enabling deletion of all messages belonging to the same Endpoint ID very quickly.
+
+#### Architecture Diagram
+
+![Screenshot](images/Message_Archiver.png)
+
+#### Use-Case
+* Compliance requiring historical record of all messages sent to an Endpoint
+* Better customer service being able to lookup each messages sent to a user
+
+
+#### AWS CloudFormation Link
+[CF Template](https://due-solution-temp.s3.amazonaws.com/amazon-pinpoint-message-archiver/v0.0.1/amazon-pinpoint-message-archiver.template)
+
+[Lambda Source](lambda/Message_Archiver)
+
+#### Documentation References
+
+* [Campaign Events](https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-campaign.html)
+* [Journey Events](https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-journey.html)
+* [Amazon Kinesis Data Firehose Data Transformation](https://docs.aws.amazon.com/firehose/latest/dev/data-transformation.html)
+
+------
+
 ### Add / Remove from Segments via Event Activity
 
 #### Description
@@ -211,6 +243,38 @@ _NOTE_: Amazon Pinpoint does not allow you to configure two-way SMS or self-mana
 * [Managing the Amazon Pinpoint SMS Channel](https://docs.aws.amazon.com/pinpoint/latest/userguide/channels-sms-manage.html)
 * [Using Two-Way SMS Messaging in Amazon Pinpoint](https://docs.aws.amazon.com/pinpoint/latest/userguide/channels-sms-two-way.html)
 * [SMS and Voice Settings](https://docs.aws.amazon.com/pinpoint/latest/userguide/settings-sms.html)
+
+------
+
+### Sending SMS Triggered by S3 File Drop
+
+#### Description
+
+Amazon Pinpoint's SendMessages API can be used to send both Transactional and Promotional SMS messages.  This repository shows how to use a CSV file drop in Amazon S3 to trigger a send via Amazon Pinpoint.
+
+Many times, third party tools can be used to generate a targeted list of users for an SMS campaign.  By dropping a file into S3, we can trigger the SMS messages to go out within milliseconds.  
+
+This solution takes advantages of an Amazon SQS FIFO Queue to ensure that we are able to control the concurrency of AWS Lambda functions being invoked as to not cause throttling exceptions.  If using SMS Long Codes, it might be smart to include a Sleep(xxx) as long codes are limited to 1 per second.  Short codes have a default rate limit of 100 per second.
+
+This solution is written in Python and uses a CloudFormation Template.
+
+This solution expects a CSV file as per the [example file](examples/sample_file.csv).  If making changes, please review both Lambda functions.
+
+Prereqs:
+* Name of a unique Amazon S3 Bucket to create
+* Amazon Pinpoint Project setup
+* A short or long code provisioned in Amazon Pinpoint
+
+#### Architecture Diagram
+
+![Screenshot](images/SMS_S3_drop.png)
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/SMS_S3_drop.yaml)
+
+#### Documentation References
+* [Pinpoint Messages API](https://docs.aws.amazon.com/pinpoint/latest/apireference/apps-application-id-messages.html)
+* [Using AWS Lambda with Amazon S3](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
 
 ------
 
