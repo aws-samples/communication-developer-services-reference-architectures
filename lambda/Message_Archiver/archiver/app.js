@@ -20,36 +20,42 @@
 let lib = require('./lib');
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, label, printf } = format;
-const myFormat = printf(({ level, message, label, timestamp }) => {
-  return `${timestamp} [${label}] ${level}: ${message}`;
+const myFormat = printf(({ level, message, label, requestId, module, timestamp }) => {
+  return `${timestamp} [RequestId: ${requestId}] [${module}] ${level}: ${message}`;
 });
-const logger = createLogger({
+const mainLogger = createLogger({
   format: combine(
-      label({ label: 'Archiver' }),
+      label({ label: 'Amazon Pinpoint Message Archiver - Archiver' }),
       timestamp(),
       myFormat
   ),
-  transports: [new transports.Console()]
+  transports: [new transports.Console()],
+  level: process.env.LOG_LEVEL || 'notice'
 });
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
+
+  const logger = mainLogger.child({requestId: context.awsRequestId});
+
 
   // Load the message passed into the Lambda function into a JSON object
   const eventText = JSON.stringify(event);
   logger.log({
     level: 'info',
-    message: eventText
+    message: eventText,
+    module: 'app.js'
   });
 
   try {
-    const resp = await lib.process(event, {
+    const resp = await lib.process(event.Records, {
       logger
     });
     return Promise.resolve(resp);
   } catch (err) {
     logger.log({
       level: 'error',
-      message: JSON.stringify(err)
+      message: JSON.stringify(err),
+      module: 'app.js'
     });
     return Promise.reject(err);
   }

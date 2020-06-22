@@ -24,13 +24,17 @@ class Renderer {
      * @constructor
      */
     constructor(options) {
-        this.options = options;
+        this.options = {}
+        this.options.logger = options.logger.child({module: 'lib/renderer.js'});
         this.cacheCompilers = {};
     }
 
-    async render(campaignId, content, endpoint) {
+    async render(content, endpoint, endpointId, config) {
 
-      const compilers = this.getCompilers(campaignId, content);
+      endpoint['Id'] = endpointId;
+      endpoint['Address'] = 'XXXXXXXX';
+      const key = `${config.campaignId}_${config.journeyId}`
+      const compilers = this.getCompilers(key, content);
 
       const renderedContentPromises = compilers.map((compiler, i) => {
 
@@ -51,12 +55,12 @@ class Renderer {
 
     }
 
-    getCompilers(campaignId, content) {
+    getCompilers(key, content) {
 
       if (!content) return [];
 
-      if (this.cacheCompilers[campaignId]) {
-        return this.cacheCompilers[campaignId];
+      if (this.cacheCompilers[key]) {
+        return this.cacheCompilers[key];
       }
 
       // {pieceType: APNS.Title, html: 'blob', defaultSubs: '{json}'}
@@ -70,7 +74,7 @@ class Renderer {
           };
       });
 
-      this.cacheCompilers[campaignId] = compilers;
+      this.cacheCompilers[key] = compilers;
 
       return compilers;
 

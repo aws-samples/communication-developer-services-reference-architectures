@@ -18,18 +18,20 @@
 
 const PinpointLib = require('./pinpoint.js');
 const RendererLib = require('./renderer.js');
-const {writeRendered} = require('./s3.js');
+const ArchiverLib = require('./archiver.js');
 
-const process = async (event, options) => {
+const process = async (records, options) => {
 
+  const logger = options.logger.child({module: 'lib/index.js'});
   try {
 
     const pinpoint = new PinpointLib(options);
     const renderer = new RendererLib(options);
+    const archiver = new ArchiverLib(options);
 
 
     // Loop over the SNS records
-    return Promise.all(event.Records.map((record, i) => {
+    return Promise.all(records.map((record, i) => {
       const body = record.body;
       const payload = JSON.parse(body);
 
@@ -42,22 +44,26 @@ const process = async (event, options) => {
       const journeyActivityId = payload.attributes.journey_activity_id;
       const endpointId = payload.client.client_id;
       const endpoint = JSON.parse(payload.client_context.custom.endpoint);
+      const messageArchiveLocation = payload.client_context.custom.message_archive_location;
 
       const config = {applicationId, eventTimestamp, campaignId, treatmentId, journeyId, journeyActivityId};
 
-      options.logger.log({
+      logger.log({
           level: 'info',
           message: JSON.stringify(config)
       });
 
       // Get the Content from Pinpoint
-      return pinpoint.getContentParts(applicationId, config)
+      return pinpoint.getContentParts(config)
         .then((content) => {
-          return renderer.render(campaignId, content, endpoint);
+          return renderer.render(content, endpoint, endpointId, config);
         })
         .then((rendered) => {
-          console.log(rendered);
-          return writeRendered(rendered, endpointId, config)
+          logger.log({
+              level: 'info',
+              message: JSON.stringify(rendered)
+          });
+          return archiver.archive(rendered, endpointId, config, messageArchiveLocation)
         });
     }))
       .then((results) => {
@@ -66,7 +72,7 @@ const process = async (event, options) => {
 
 
   } catch (err) {
-    options.logger.log({
+    logger.log({
       level: 'error',
       message: JSON.stringify(err)
     });

@@ -14,45 +14,39 @@
  * @author rjlowe
  */
 
-let lib = require('./lib');
+'use strict';
 
-const { createLogger, format, transports } = require('winston');
-const { combine, timestamp, label, printf } = format;
-const myFormat = printf(({ level, message, label, requestId, module, timestamp }) => {
-  return `${timestamp} [RequestId: ${requestId}] [${module}] ${level}: ${message}`;
-});
-const mainLogger = createLogger({
-  format: combine(
-    label({ label: 'Amazon Pinpoint Message Archiver - Queuer' }),
-    timestamp(),
-    myFormat
-  ),
-  transports: [new transports.Console()],
-  level: process.env.LOG_LEVEL || 'notice'
+const AWS = require('aws-sdk');
+AWS.config.update({
+ region: process.env.AWS_REGION
 });
 
-// Lambda Entry Point
-exports.handler = async (event, context) => {
+const queueUrl = process.env.SQS_QUEUE_URL;
+const sqs = new AWS.SQS();
 
-  const logger = mainLogger.child({requestId: context.awsRequestId});
+class Queuer {
 
-  const eventText = JSON.stringify(event);
-  logger.log({
-    level: 'info',
-    message: eventText,
-    module: 'app.js'
-  });
-
-  try {
-
-    return lib.process(event.records, {logger});
-
-  } catch (err) {
-    logger.log({
-      level: 'error',
-      message: JSON.stringify(err),
-      module: 'app.js'
-    });
-    return Promise.reject(err);
+  /**
+   * @class EventProcessor
+   * @constructor
+   */
+  constructor(options) {
+      this.options = {}
+      this.options.logger = options.logger.child({module: 'lib/queuer.js'});
   }
-};
+
+  sendEventForAchiving(mutatedEvent) {
+    this.options.logger.log({
+      level: 'info',
+      message: mutatedEvent
+    });
+
+    return sqs.sendMessage({
+      MessageBody: mutatedEvent,
+      QueueUrl: queueUrl
+    }).promise();
+  }
+}
+
+
+module.exports = Queuer;

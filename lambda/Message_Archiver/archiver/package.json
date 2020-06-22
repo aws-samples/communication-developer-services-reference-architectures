@@ -3,7 +3,14 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "npm install",
+    "test": "mocha lib/*.spec.js",
+    "build:init": "rm -rf package-lock.json && rm -rf dist && rm -rf node_modules",
+    "build:zip": "rm -rf package-lock.json && zip -rq --exclude=*tests* --exclude=*template.yml archiver.zip .",
+    "build:dist": "mkdir dist && mv archiver.zip dist/",
+    "build": "npm run build:init && npm install --production && npm run build:zip && npm run build:dist",
+    "coverage": "nyc npm test",
+    "local:test": "sam local invoke 'ExampleService' -e ./tests/event.json"
   },
   "author": "",
   "license": "ISC",
@@ -15,23 +22,13 @@
     "winston": "^3.2.1"
   },
   "devDependencies": {
-    "aws-sdk-mock": "*",
     "aws-sdk": "*",
+    "aws-sdk-mock": "*",
     "chai": "*",
     "mocha": "*",
     "nyc": "*",
     "sinon": "*",
     "sinon-chai": "*"
-  },
-  "scripts": {
-    "pretest": "npm install",
-    "test": "mocha lib/*.spec.js",
-    "build:init": "rm -rf package-lock.json && rm -rf dist && rm -rf node_modules",
-    "build:zip": "rm -rf package-lock.json && zip -rq --exclude=*tests* --exclude=*template.yml archiver.zip .",
-    "build:dist": "mkdir dist && mv archiver.zip dist/",
-    "build": "npm run build:init && npm install --production && npm run build:zip && npm run build:dist",
-    "coverage": "nyc npm test",
-    "local:test": "sam local invoke 'ExampleService' -e ./tests/event.json"
   },
   "description": ""
 }

@@ -14,45 +14,34 @@
  * @author rjlowe
  */
 
-let lib = require('./lib');
+'use strict';
 
-const { createLogger, format, transports } = require('winston');
-const { combine, timestamp, label, printf } = format;
-const myFormat = printf(({ level, message, label, requestId, module, timestamp }) => {
-  return `${timestamp} [RequestId: ${requestId}] [${module}] ${level}: ${message}`;
-});
-const mainLogger = createLogger({
-  format: combine(
-    label({ label: 'Amazon Pinpoint Message Archiver - Queuer' }),
-    timestamp(),
-    myFormat
-  ),
-  transports: [new transports.Console()],
-  level: process.env.LOG_LEVEL || 'notice'
-});
+const EventProcessor = require('./processor.js');
 
-// Lambda Entry Point
-exports.handler = async (event, context) => {
+const process = async (records, options) => {
 
-  const logger = mainLogger.child({requestId: context.awsRequestId});
-
-  const eventText = JSON.stringify(event);
-  logger.log({
-    level: 'info',
-    message: eventText,
-    module: 'app.js'
+  const logger = options.logger.child({
+    module: 'lib/index.js'
   });
+
+  const processor = new EventProcessor(options);
 
   try {
 
-    return lib.process(event.records, {logger});
+    return processor.processRecords(records)
+      .then((mutated_records) => {
+        return { records: mutated_records };
+      });
 
   } catch (err) {
     logger.log({
       level: 'error',
-      message: JSON.stringify(err),
-      module: 'app.js'
+      message: JSON.stringify(err)
     });
     return Promise.reject(err);
   }
+}
+
+module.exports = {
+  process
 };

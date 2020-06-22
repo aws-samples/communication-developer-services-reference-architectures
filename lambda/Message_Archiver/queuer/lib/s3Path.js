@@ -14,45 +14,28 @@
  * @author rjlowe
  */
 
-let lib = require('./lib');
 
-const { createLogger, format, transports } = require('winston');
-const { combine, timestamp, label, printf } = format;
-const myFormat = printf(({ level, message, label, requestId, module, timestamp }) => {
-  return `${timestamp} [RequestId: ${requestId}] [${module}] ${level}: ${message}`;
-});
-const mainLogger = createLogger({
-  format: combine(
-    label({ label: 'Amazon Pinpoint Message Archiver - Queuer' }),
-    timestamp(),
-    myFormat
-  ),
-  transports: [new transports.Console()],
-  level: process.env.LOG_LEVEL || 'notice'
-});
 
-// Lambda Entry Point
-exports.handler = async (event, context) => {
+const generateFilePath = function(endpointId, eventTimestamp) {
 
-  const logger = mainLogger.child({requestId: context.awsRequestId});
+  const prefix = process.env.S3_PREFIX || 'archive';
+  const s3Bucket = process.env.S3_BUCKET;
 
-  const eventText = JSON.stringify(event);
-  logger.log({
-    level: 'info',
-    message: eventText,
-    module: 'app.js'
+  const d = new Date(eventTimestamp);
+  return 's3://' + s3Bucket + '/' + prefix + '/' + endpointId
+    + '/' + d.getUTCFullYear() + '/' + pad(d.getUTCMonth() + 1)
+    + '/' + pad(d.getUTCDate()) + '/' + pad(d.getUTCHours())
+    + '/' + uuidv4();
+}
+
+function pad(n){return n<10 ? '0'+n : n}
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
   });
+}
 
-  try {
 
-    return lib.process(event.records, {logger});
-
-  } catch (err) {
-    logger.log({
-      level: 'error',
-      message: JSON.stringify(err),
-      module: 'app.js'
-    });
-    return Promise.reject(err);
-  }
-};
+module.exports = {generateFilePath};

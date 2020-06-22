@@ -18,9 +18,6 @@ AWS.config.update({
   region: process.env.AWS_REGION
 });
 
-const pinpoint = new AWS.Pinpoint();
-
-
 class Pinpoint {
 
   /**
@@ -28,10 +25,13 @@ class Pinpoint {
      * @constructor
      */
     constructor(options) {
-        this.options = options;
+        this.options = {}
+        this.options.logger = options.logger.child({module: 'lib/pinpoint.js'});
         // Cache will exist for the lifetime of the current execution only
         this.cacheCampaignContent = {}
         this.cacheJourneyContent = {}
+
+        this.pinpoint = new AWS.Pinpoint();
 
         this.getTemplateContentByType = {
           'EMAIL': (templateName) => this.getEmailTemplateContent(templateName),
@@ -51,14 +51,14 @@ class Pinpoint {
         }
     }
 
-  getContentParts(applicationId, options) {
-    return this.determineTemplateOrCampaign(applicationId, options);
+  getContentParts(options) {
+    return this.determineTemplateOrCampaign(options);
   }
 
-  determineTemplateOrCampaign(applicationId, options) {
+  determineTemplateOrCampaign(options) {
     return options.campaignId
-      ? this.getCachedCampaignContent(applicationId, options.campaignId, options.treatmentId)
-      : this.getCachedJourneyContent(applicationId, options.journeyId, options.journeyActivityId)
+      ? this.getCachedCampaignContent(options.applicationId, options.campaignId, options.treatmentId)
+      : this.getCachedJourneyContent(options.applicationId, options.journeyId, options.journeyActivityId)
   }
 
   getCachedCampaignContent(applicationId, campaignId, treatmentId) {
@@ -76,7 +76,7 @@ class Pinpoint {
 
   getCampaignContent(applicationId, campaignId, treatmentId) {
 
-    return pinpoint.getCampaign({
+    return this.pinpoint.getCampaign({
         ApplicationId: applicationId,
         CampaignId: campaignId
       }).promise()
@@ -166,7 +166,7 @@ class Pinpoint {
   }
 
   getJourneyContent(applicationId, journeyId, journeyActivityId) {
-    return pinpoint.getJourney({
+    return this.pinpoint.getJourney({
       ApplicationId: applicationId,
       JourneyId: journeyId,
     }).promise()
@@ -206,7 +206,7 @@ class Pinpoint {
 
   getEmailTemplateContent(templateName) {
     if (!templateName) return [];
-    return pinpoint.getEmailTemplate({
+    return this.pinpoint.getEmailTemplate({
       TemplateName: templateName
     }).promise()
       .then((response) => {
@@ -232,7 +232,7 @@ class Pinpoint {
 
   getSMSTemplateContent(templateName) {
     if (!templateName) return [];
-    return pinpoint.getSmsTemplate({
+    return this.pinpoint.getSmsTemplate({
       TemplateName: templateName
     }).promise()
       .then((response) => {
@@ -252,7 +252,7 @@ class Pinpoint {
 
   getPushTemplateContent(templateName) {
     if (!templateName) return [];
-    return pinpoint.getPushTemplate({
+    return this.pinpoint.getPushTemplate({
       TemplateName: templateName
     }).promise()
       .then((response) => {
@@ -279,7 +279,7 @@ class Pinpoint {
 
   getVoiceTemplate(templateName) {
     if (!templateName) return [];
-    return pinpoint.getVoiceTemplate({
+    return this.pinpoint.getVoiceTemplate({
       TemplateName: templateName
     }).promise()
       .then((response) => {

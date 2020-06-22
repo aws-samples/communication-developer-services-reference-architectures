@@ -165,7 +165,7 @@ The result are MIME-typed files stored in Amazon S3 with the Key Prefix: /archiv
 
 
 #### AWS CloudFormation Link
-[CF Template](https://due-solution-temp.s3.amazonaws.com/amazon-pinpoint-message-archiver/v0.0.1/amazon-pinpoint-message-archiver.template)
+[CF Template](https://due-solution-temp.s3.amazonaws.com/amazon-pinpoint-message-archiver/v0.0.2/amazon-pinpoint-message-archiver.template)
 
 [Lambda Source](lambda/Message_Archiver)
 
