@@ -46,6 +46,42 @@ Additionally, the Lambda function should be configured to make use of the SES Ac
 
 ## Amazon Pinpoint Basics
 
+### Amazon S3 Triggered Endpoint Imports
+
+#### Description
+
+Even though Pinpoint has great API support to stream endpoint data to Pinpoint in realtime, many customers operate in a batch world and are used to loading data between systems in a batch method.  Pinpoint has the ability to import data from CSV or JSON files from Amazon S3 specifically for this use-case.  This could be used in a nightly batch process to update all Pinpoint Endpoints with the most recent data and preferences, or on a much smaller interval.  
+
+The architecture below will set up an infrastructure to automatically trigger when a new file is placed in an S3 bucket.  The process, managed by an AWS Step Functions state machine, will start a Pinpoint import process, wait for it to complete, and send notifications that the job started, successfully finished, or failed.
+
+For notifications, the below architecture uses SNS which allows for notifications to be sent to humans (ex: Email, SMS) or other systems that can read from the SNS topic.  The notifications include the details of the import job so that quick action can be taken and records of past import jobs can be retained.  The SNS Topic to subscribe to for notifications is found as an output parameter of the CloudFormation template.
+
+With this architecture, development teams can simply save JSON or CSV formatted files for import in the designated S3 location and the process will manage the rest.  It will provide detail logging in CloudWatch and send SNS notifications.
+
+#### Architecture Diagram
+
+![Screenshot](images/S3_triggered_import.png)
+
+#### Use-Case
+
+* Nightly Batch Endpoint Updates
+* Ad-hoc Batch Endpoint Updates
+* Triggered Imports with Status Alerts
+* Operational notifications of import jobs
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/S3_triggered_import.yaml)
+
+#### Documentation References
+
+* [Importing segments](https://docs.aws.amazon.com/pinpoint/latest/userguide/segments-importing.html)
+* [Developer Guide Importing segments](https://docs.aws.amazon.com/pinpoint/latest/developerguide/segments-importing.html)
+* [Using AWS Lambda with Amazon S3](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
+* [What Is AWS Step Functions?](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)
+* [Tutorial: Subscribing an endpoint to an Amazon SNS topic](https://docs.aws.amazon.com/sns/latest/dg/sns-tutorial-create-subscribe-endpoint-to-topic.html)
+
+------
+
 ### Pinpoint Event Processing
 
 #### Description
