@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Amazon Connect as an Amazon Pinpoint Channel
+Description: Self-Managed Opt Outs in Pinpoint Channel
 
 Parameters:
   PinpointProjectId:
