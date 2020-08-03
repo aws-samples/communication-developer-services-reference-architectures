@@ -55,7 +55,7 @@ Resources:
   AutoResponderLambda:
     Type: AWS::Lambda::Function
     Properties:
-      Handler: index.lambda_handler
+      Handler: index.handler
       Role: !GetAtt AutoResponderLambdaRole.Arn
       Runtime: "nodejs12.x"
       Timeout: 10
@@ -158,7 +158,7 @@ Resources:
               - Effect: "Allow"
                 Action:
                   - "mobiletargeting:GetEmailTemplate"
-                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+                Resource: !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:templates/*/*"
               - Effect: "Allow"
                 Action:
                   - "ses:SendEmail"

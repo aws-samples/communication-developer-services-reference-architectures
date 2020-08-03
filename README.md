@@ -67,6 +67,7 @@ The architecture below allows one to deploy a templated auto-response behavior f
 
 Notes:
 1. While most of the configuration is done on the SES side (as that is the one processing received emails), even so called "Pinpoint-only" deployments can use this approach as the email configurations are shared between the two services already.
+1. Ensure your SES domain is verified and you are out of the sandbox. If still in the sandbox, you can only send email to the Amazon SES mailbox simulator and _to_ email addresses/domains that you have verified.
 1. It is assumed that no additional tracking and actions are needed on such rejected and auto-replied emails, but you can further modify the flow by moving the rule around, adding more actions, and even specifying a particular SES Configuration Set.
 1. Pinpoint template instead of SES template is used as the latter does not currently have Console interface allowing for easier modification.
 
