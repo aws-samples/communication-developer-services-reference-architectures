@@ -1,13 +1,25 @@
 # AWS Digital User Engagement Reference Architectures
 
-A repository of reference architectures for AWS Digital User Engagement services, Amazon Pinpoint and Amazon Simple Email Service (SES), and other AWS services.
+A repository of reference architectures for AWS Digital User Engagement services, [Amazon Pinpoint](https://aws.amazon.com/pinpoint/) and [Amazon Simple Email Service (SES)](https://aws.amazon.com/ses/), and other AWS services.
 
 ## Table of Contents
 
 * [Amazon SES Basics](#user-content-amazon-ses-basics)
+  * [SES Event Processing](#SES-Event-Processing)
 * [Amazon Pinpoint Basics](#user-content-amazon-pinpoint-basics)
+  * [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports)
+  * [Pinpoint Event Processing](#Pinpoint-Event-Processing)
+  * [Pinpoint S3 Event Database](#Pinpoint-S3-Event-Database)
+  * [Pinpoint Message Archiver](#Pinpoint-Message-Archiver)
+  * [Add / Remove from Segments via Event Activity](#add--remove-from-segments-via-event-activity)
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
+  * [Self-Managed Opt Outs](#self-managed-opt-outs)
+  * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
 * [Amazon Pinpoint Extensibility](#user-content-amazon-pinpoint-extensibility)
+  * [Advanced Segmentation with Amazon S3 and Amazon Athena](#Advanced-Segmentation-with-Amazon-S3-and-Amazon-Athena)
+  * [Send-Time Amazon Pinpoint Campaign Attributes](#Send-Time-Amazon-Pinpoint-Campaign-Attributes)
+  * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
+  * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
 
 ------
 ## Amazon SES Basics
