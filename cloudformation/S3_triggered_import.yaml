@@ -9,7 +9,7 @@ Parameters:
 
   FileDropS3Bucket:
     Type: String
-    Description: Name of the Amazon S3 Bucket where new import files will be placed.
+    Description: Name of the existing Amazon S3 Bucket where new import files will be placed.
 
   FileDropS3Prefix:
     Type: String
