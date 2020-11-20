@@ -1,1 +1,59 @@
-{"modules":[{"id":"36116af3-289a-4aa8-bf87-deb98e24d070","type":"Disconnect","branches":[],"parameters":[],"metadata":{"position":{"x":711.5,"y":61.5}}},{"id":"7dd279f6-d10c-400d-b7dd-0852eecef283","type":"PlayPrompt","branches":[{"condition":"Success","transition":"36116af3-289a-4aa8-bf87-deb98e24d070"}],"parameters":[{"name":"Text","value":"$.Attributes.Message","namespace":"External"},{"name":"TextToSpeechType","value":"text"}],"metadata":{"position":{"x":269,"y":24},"useDynamic":true}}],"version":"1","type":"contactFlow","start":"7dd279f6-d10c-400d-b7dd-0852eecef283","metadata":{"entryPointPosition":{"x":15.5,"y":15.5},"snapToGrid":false,"name":"Simple Flow","description":null,"type":"contactFlow","status":"published","hash":"74160b39a2f0bec4e7bb5de9ab28314712ce983d4772ea119beb08b156871d7d"}}
+{
+  "modules": [
+    {
+      "id": "36116af3-289a-4aa8-bf87-deb98e24d070",
+      "type": "Disconnect",
+      "branches": [],
+      "parameters": [],
+      "metadata": {
+        "position": {
+          "x": 711.5,
+          "y": 61.5
+        }
+      }
+    },
+    {
+      "id": "7dd279f6-d10c-400d-b7dd-0852eecef283",
+      "type": "PlayPrompt",
+      "branches": [
+        {
+          "condition": "Success",
+          "transition": "36116af3-289a-4aa8-bf87-deb98e24d070"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "Text",
+          "value": "$.Attributes.Message",
+          "namespace": "External"
+        },
+        {
+          "name": "TextToSpeechType",
+          "value": "text"
+        }
+      ],
+      "metadata": {
+        "position": {
+          "x": 269,
+          "y": 24
+        },
+        "useDynamic": true
+      }
+    }
+  ],
+  "version": "1",
+  "type": "contactFlow",
+  "start": "7dd279f6-d10c-400d-b7dd-0852eecef283",
+  "metadata": {
+    "entryPointPosition": {
+      "x": 15.5,
+      "y": 15.5
+    },
+    "snapToGrid": false,
+    "name": "Outbound calling",
+    "description": null,
+    "type": "contactFlow",
+    "status": "published",
+    "hash": "74160b39a2f0bec4e7bb5de9ab28314712ce983d4772ea119beb08b156871d7d"
+  }
+}
