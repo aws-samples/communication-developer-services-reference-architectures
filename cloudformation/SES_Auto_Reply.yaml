@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Automatic Responder (aka NoReply)
+
+Parameters:
+  SESRuleSet:
+    Type: String
+    Description: "Existing Amazon Simple Email Service (SES) rule set to store the configuration under. Usually default-rule-set is the active rule set."
+    Default: "default-rule-set"
+    MinLength: 1
+  SESRecipients:
+    Type: String
+    Default: ""
+    Description: "Comma-separated recipients (or domains) that the automatic response will apply to. Leave blank to apply to _all_."
+  PinpointTemplateName:
+    Type: String
+    Description: "Amazon Pinpoint template name to use for the automatic response. Note, to use Pinpoint (!) template here, not the SES one."
+    MinLength: 1
+  DefaultEmail:
+    Type: String
+    Default: ""
+    Description: "Default outgoing email address to send auto-responder emails from. Leave blank if you want the auto-reply to come from the original email address to which the triggering email was sent."
+
+Conditions:
+  #  SESRuleSetNotSet: !Equals ["", !Ref SESRuleSet]
+  RecipientsNotSet: !Equals ["", !Ref SESRecipients]
+#  DefaultEmailNotSet: !Equals ["", !Ref DefaultEmail]
+#   NeedsPinpointTemplate: !Equals
+#       - ''
+#       - !Ref PinpointTemplateName
+
+Resources:
+  # PinpointTemplate:
+  #   Type: AWS::Pinpoint::EmailTemplate
+  #   Condition: NeedsPinpointTemplate
+  #   Properties:
+  #     Name: !Ref PinpointTemplateName
+  SESEmailReceivedRule:
+    Type: "AWS::SES::ReceiptRule"
+    Properties:
+      RuleSetName: !Ref SESRuleSet
+      Rule:
+        Name: !Ref PinpointTemplateName
+        Enabled: true
+        Recipients: !If
+          - RecipientsNotSet
+          - !Ref AWS::NoValue
+          - [!Ref SESRecipients]
+        Actions:
+          - LambdaAction:
+              FunctionArn: !GetAtt AutoResponderLambda.Arn
+              InvocationType: Event
+          - StopAction:
+              Scope: RuleSet
+
+  AutoResponderLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt AutoResponderLambdaRole.Arn
+      Runtime: "nodejs12.x"
+      Timeout: 10
+      MemorySize: 128
+      Environment:
+        Variables:
+          TemplateName: !Ref PinpointTemplateName
+          DefaultEmail: !Ref DefaultEmail
+      Code:
+        ZipFile: |
+          var AWS = require('aws-sdk');
+
+          exports.handler = function (event, context, callback) {
+              console.log('Auto-Reply invoked as Lambda Action -- this function is designed to run directly off the receipt - incoming email body is disregarded');
+
+              var sesNotification = event.Records[0].ses;
+              console.log("SES Notification:\n", JSON.stringify(sesNotification));
+
+              var pinpoint = new AWS.Pinpoint();
+              var params = {
+                  TemplateName: process.env.TemplateName
+              };
+              pinpoint.getEmailTemplate(params, function (err, data) {
+                  if (err) {
+                      console.log(err.message);
+                  }
+                  else {
+                      console.log("Template pulled: ", data.EmailTemplateResponse.Subject);
+
+                      var from = sesNotification.mail.commonHeaders.from[0];
+                      var to = sesNotification.mail.commonHeaders.to[0];
+                      var subject = data.EmailTemplateResponse.Subject + sesNotification.mail.commonHeaders.subject;
+                      var messageId = sesNotification.mail.commonHeaders.messageId.replace("@amazon.com", "");
+                      var sender = (process.env.DefaultEmail!=null && process.env.DefaultEmail != "") ? process.env.DefaultEmail : to;
+                      var recipient = from;
+                      //const configuration_set = "ConfigSet";
+                      //var body_text = data.EmailTemplateResponse.TextPart;
+                      var body_html = data.EmailTemplateResponse.HtmlPart;
+                      body_html = body_html.replace("%%NAME%%", from).replace("%%ID%%", messageId);
+                      var charset = "UTF-8";
+
+                      var ses = new AWS.SES();
+                      var params = {
+                          Source: sender,
+                          Destination: {
+                              ToAddresses: [
+                                  recipient
+                              ],
+                          },
+                          Message: {
+                              Subject: {
+                                  Data: subject,
+                                  Charset: charset
+                              },
+                              Body: {
+                                  /*Text: {
+                                      Data: body_text,
+                                      Charset: charset
+                                  },*/
+                                  Html: {
+                                      Data: body_html,
+                                      Charset: charset
+                                  }
+                              }
+                          },
+                          //ConfigurationSetName: configuration_set
+                      };
+
+                      ses.sendEmail(params, function (err, data) {
+                          if (err) {
+                              console.log(err.message);
+                          }
+                          else {
+                              console.log("Email sent! Message ID: ", data.MessageId);
+                          }
+                      });
+                  }
+              });
+              console.log('Responding with all clear - in case of sync invocation, etc.');
+              callback(null, null);
+          };
+
+  AutoResponderLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "LambdaExecutionPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "mobiletargeting:GetEmailTemplate"
+                Resource: !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:templates/*/*"
+              - Effect: "Allow"
+                Action:
+                  - "ses:SendEmail"
+                Resource: "arn:aws:ses:*:*:identity/*"
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      Principal: "ses.amazonaws.com"
+      SourceAccount: !Sub ${AWS::AccountId}
+      FunctionName: !GetAtt AutoResponderLambda.Arn

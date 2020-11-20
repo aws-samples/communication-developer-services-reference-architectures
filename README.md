@@ -1,13 +1,26 @@
 # AWS Digital User Engagement Reference Architectures
 
-A repository of reference architectures for AWS Digital User Engagement services, Amazon Pinpoint and Amazon Simple Email Service (SES), and other AWS services.
+A repository of reference architectures for AWS Digital User Engagement services, [Amazon Pinpoint](https://aws.amazon.com/pinpoint/) and [Amazon Simple Email Service (SES)](https://aws.amazon.com/ses/), and other AWS services.
 
 ## Table of Contents
 
 * [Amazon SES Basics](#user-content-amazon-ses-basics)
+  * [SES Event Processing](#SES-Event-Processing)
+  * [SES Auto-Reply](#SES-Auto-Reply)
 * [Amazon Pinpoint Basics](#user-content-amazon-pinpoint-basics)
+  * [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports)
+  * [Pinpoint Event Processing](#Pinpoint-Event-Processing)
+  * [Pinpoint S3 Event Database](#Pinpoint-S3-Event-Database)
+  * [Pinpoint Message Archiver](#Pinpoint-Message-Archiver)
+  * [Add / Remove from Segments via Event Activity](#add--remove-from-segments-via-event-activity)
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
+  * [Self-Managed Opt Outs](#self-managed-opt-outs)
+  * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
 * [Amazon Pinpoint Extensibility](#user-content-amazon-pinpoint-extensibility)
+  * [Advanced Segmentation with Amazon S3 and Amazon Athena](#Advanced-Segmentation-with-Amazon-S3-and-Amazon-Athena)
+  * [Send-Time Amazon Pinpoint Campaign Attributes](#Send-Time-Amazon-Pinpoint-Campaign-Attributes)
+  * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
+  * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
 
 ------
 ## Amazon SES Basics
@@ -41,6 +54,38 @@ Additionally, the Lambda function should be configured to make use of the SES Ac
 * [Amazon SES Notifications Through Amazon SNS](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-sending-activity-using-notifications-sns.html)
 * [Configuring Amazon SNS Notifications for Amazon SES](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/configure-sns-notifications.html)
 * [Amazon SNS Notification Examples for Amazon SES](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/notification-examples.html)
+
+------
+
+### SES Auto Reply
+
+#### Description
+
+Most of the time, the outgoing email address used to send email w/SES and Pinpoint is not setup to receive emails (aka No-Reply). It is often expected, however, that should somebody reply to such an email, that they would receive an automated guidance/confirmation that the address is not monitored and possibly who and how to reach for assistance. If that is not specifically configured, using such a non-existing email address would lead to an unhelpful and unprofessional server rejection due to address not being registered.
+
+The architecture below allows one to deploy a templated auto-response behavior for a SES/Pinpoint domain/email address. A new rule is added to the SES Email Receiving Rule Set. The rule can be limited to specific email address, specific domain, or just be set to be across all domains. It can also have the default response address set or simply reuse the address that the original email was sent to. Once the rule is set, it is pointed to a Lambda function. Finally the latter looks up the chosen Pinpoint template and uses it to reply back. The template subject is used as the prefix for the original email subject. Optional template tag %%NAME%% is replaced with the original email's FROM and %%ID%% with the SES email message id.
+
+Notes:
+1. While most of the configuration is done on the SES side (as that is the one processing received emails), even so called "Pinpoint-only" deployments can use this approach as the email configurations are shared between the two services already.
+1. Ensure your SES domain is verified and you are out of the sandbox. If still in the sandbox, you can only send email to the Amazon SES mailbox simulator and _to_ email addresses/domains that you have verified.
+1. It is assumed that no additional tracking and actions are needed on such rejected and auto-replied emails, but you can further modify the flow by moving the rule around, adding more actions, and even specifying a particular SES Configuration Set.
+1. Pinpoint template instead of SES template is used as the latter does not currently have Console interface allowing for easier modification.
+
+#### Architecture Diagram
+
+![Screenshot](images/SES_Auto_Reply.png)
+
+#### Use-Case
+
+* Common practice configuration when sending emails
+* Professional auto-reply to emails sent to the configured sending email addresses
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/SES_Auto_Reply.yaml)
+
+#### Documentation References
+
+* [Receiving email with Amazon SES](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/receiving-email.html)
 
 ------
 
