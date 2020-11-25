@@ -111,36 +111,36 @@ Resources:
                         'PhoneTypeCode', response_json)
                     user_document[i]['PhoneType'] = getValue('PhoneType', response_json)
                 return user_document
-                def getNumeric(str):
-                    import re
-                    temp = re.findall(r'\d+', str)
-                    res = ''.join(temp)
-                    return len(res)
-                def getValue(name, field):
-                    return field[name] if name in field else "UNKNOWN"
-                def load_csv_from_s3(s3_data_bucket, s3_data_key):
-                    bucket, key = s3_data_bucket, s3_data_key
-                    s3 = boto3.resource('s3')
-                    obj = s3.Object(bucket, key)
-                    response = obj.get()
-                    lines = response['Body'].read().decode('utf-8-sig').splitlines()
-                    segment_records = {}
-                    count = 0
-                    for row in csv.DictReader(lines):
-                        segment_records[count] = row
-                        count += 1
-                    segment_records = json.dumps(segment_records)
-                    return segment_records
-                
-                def lambda_handler(event, context):
-                    s3url = event['S3URL']
-                    s3bucket = event['S3Bucket']
-                    s3key = event['S3Key']
-                    filename, extension = os.path.splitext(os.path.basename(s3url))
-                    user_document = {}
-                    user_document = load_csv_from_s3(s3bucket, s3key)
-                    user_document_valid_phoneNumbers = validatePinpoint(user_document)
-                    return user_document_valid_phoneNumbers
+            def getNumeric(str):
+                import re
+                temp = re.findall(r'\d+', str)
+                res = ''.join(temp)
+                return len(res)
+            def getValue(name, field):
+                return field[name] if name in field else "UNKNOWN"
+            def load_csv_from_s3(s3_data_bucket, s3_data_key):
+                bucket, key = s3_data_bucket, s3_data_key
+                s3 = boto3.resource('s3')
+                obj = s3.Object(bucket, key)
+                response = obj.get()
+                lines = response['Body'].read().decode('utf-8-sig').splitlines()
+                segment_records = {}
+                count = 0
+                for row in csv.DictReader(lines):
+                    segment_records[count] = row
+                    count += 1
+                segment_records = json.dumps(segment_records)
+                return segment_records
+            
+            def lambda_handler(event, context):
+                s3url = event['S3URL']
+                s3bucket = event['S3Bucket']
+                s3key = event['S3Key']
+                filename, extension = os.path.splitext(os.path.basename(s3url))
+                user_document = {}
+                user_document = load_csv_from_s3(s3bucket, s3key)
+                user_document_valid_phoneNumbers = validatePinpoint(user_document)
+                return user_document_valid_phoneNumbers
 
   ImportSegmentLambdaValidateRole:
     Type: AWS::IAM::Role
