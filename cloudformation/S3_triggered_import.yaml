@@ -19,7 +19,15 @@ Parameters:
   CampaignDelay:
     Type: Number
     Default: 15
-    Description: Number of minutes from the time of import to send the campaign. Allows for the last minute double check and/or pause as needed.
+    Description: Number of minutes from the time of import to send the campaign. Allows for the last minute double check and/or pause as needed. Will be saved as CreateCampaign Lambda environment variable.
+    
+  AutoCreateCampaign:
+    Type: String
+    Default: False
+    AllowedValues: 
+      - True
+      - False
+    Description: Choose True if you want to automatically create a campaign based on the imported file or False if you want to just import into the system. Default is False. Will be saved as ImportSegment Lambda environment variable. 
 
   ValidatePhone: 
     Type: String
@@ -60,11 +68,7 @@ Resources:
       Environment:
         Variables:
           LOG_LEVEL: "INFO"
-          APPLICATION_ID: !Ref PinpointProjectId
-          ROLE_ARN: !GetAtt PinpointImportRole.Arn
-          FILE_FORMAT: "CSV"
-          Assume_US: !Ref AssumeUS
-          Validate_Phone: !Ref ValidatePhone
+          ASSUME_US: !Ref AssumeUS
       Code:
           ZipFile: |
             import csv
@@ -74,7 +78,7 @@ Resources:
             import boto3
             def validatePinpoint(user_document_old):
                 pinpointClient = boto3.client('pinpoint')
-                if os.environ["Assume_US"].lower() != "false":
+                if os.environ["ASSUME_US"].lower() != "false":
                     assume_US = True
                 else:
                     assume_US = False
@@ -208,11 +212,6 @@ Resources:
       Environment:
         Variables:
           LOG_LEVEL: "INFO"
-          APPLICATION_ID: !Ref PinpointProjectId
-          ROLE_ARN: !GetAtt PinpointImportRole.Arn
-          FILE_FORMAT: "CSV"
-          Assume_US: !Ref AssumeUS
-          Validate_Phone: !Ref ValidatePhone
       Code:
           ZipFile: |
             import csv
@@ -311,24 +310,21 @@ Resources:
           APPLICATION_ID: !Ref PinpointProjectId
           ROLE_ARN: !GetAtt PinpointImportRole.Arn
           FILE_FORMAT: "CSV"
-          Assume_US: !Ref AssumeUS
-          Validate_Phone: !Ref ValidatePhone
+          CREATE_CAMPAIGN: !Ref AutoCreateCampaign
+          VALIDATE_PHONE: !Ref ValidatePhone
           ValidateFunction: ImportSegmentLambdaValidateFunction
           SaveValidateResult: ImportSegmentLambdaSaveFunction
       Code:
           ZipFile: |
-            import csv
             import json
             import logging
             import os
-            from urllib.parse import urlparse
             import boto3
             import typing
             def invokeLambdaFunction(*, functionName:str=None, payload:typing.Mapping[str, str]=None):
                 if  functionName == None:
-                    raise Exception('ERROR: functionName parameter cannot be NULL')
-                payloadStr = json.dumps(payload)
-                payloadBytesArr = bytes(payloadStr, encoding='utf8')
+                    raise Exception('ERROR: functionName parameter required')
+                payloadBytesArr = bytes(json.dumps(payload), encoding='utf8')
                 client = boto3.client('lambda')
                 response = client.invoke(
                     FunctionName=functionName,
@@ -377,21 +373,23 @@ Resources:
                     value_list.append(value_json_new)
                 return_json = {"records": value_list}
                 return return_json
-            
             def lambda_handler(event, context):
-                if os.environ["Validate_Phone"].lower() != "false":
+                if os.environ["VALIDATE_PHONE"].lower() != "false":
                     validate_phone = True
                 else:
                     validate_phone = False
                 s3url = event['S3URL']
                 s3bucket = event['S3Bucket']
-                s3key = event['S3Key']
                 filename, extension = os.path.splitext(os.path.basename(s3url))
                 if validate_phone:
-                    user_document_valid_phoneNumbers=invokeLambdaFunction(functionName=os.environ["ValidateFunction"],payload=event)
-                    segment_valid_structure = map_to_segment(user_document_valid_phoneNumbers)
-                    event_save = {"segment_valid_structure":segment_valid_structure,"s3bucket":s3bucket,"filename":filename}
-                    s3url = invokeLambdaFunction(functionName=os.environ["SaveValidateResult"],payload=event_save)
+                    user_document_valid_phoneNumbers = invokeLambdaFunction(
+                        functionName=os.environ["ValidateFunction"], payload=event)
+                    segment_valid_structure = map_to_segment(
+                        user_document_valid_phoneNumbers)
+                    event_save = {"segment_valid_structure": segment_valid_structure,
+                                  "s3bucket": s3bucket, "filename": filename}
+                    s3url = invokeLambdaFunction(
+                        functionName=os.environ["SaveValidateResult"], payload=event_save)
                 client = boto3.client('pinpoint')
                 response = client.create_import_job(
                     ApplicationId=os.environ.get('APPLICATION_ID'),
@@ -407,6 +405,7 @@ Resources:
                     'ImportId': response['ImportJobResponse']['Id'],
                     'SegmentId': response['ImportJobResponse']['Definition']['SegmentId'],
                     'ExternalId': response['ImportJobResponse']['Definition']['ExternalId'],
+                    'create_campaign': os.environ["CREATE_CAMPAIGN"].lower()
                 }
 
   ImportSegmentLambdaRole:
@@ -530,6 +529,7 @@ Resources:
             logging.getLogger().setLevel(log_level)
 
             logging.info(event)
+            create_campaign = event['create_campaign']
 
             response = client.get_import_job(
               ApplicationId=os.environ.get('APPLICATION_ID'),
@@ -543,7 +543,8 @@ Resources:
               'SegmentId': response['ImportJobResponse']['Definition']['SegmentId'],
               'ExternalId': response['ImportJobResponse']['Definition']['ExternalId'],
               'Status': response['ImportJobResponse']['JobStatus'],
-              'ResponseFormatted': response['ImportJobResponse']
+              'ResponseFormatted': response['ImportJobResponse'],
+              'create_campaign' : create_campaign
             }
 
   ImportSegmentStatusLambdaRole:
@@ -758,12 +759,35 @@ Resources:
                     {
                       "Variable": "$.Status",
                       "StringEquals": "FAILED",
-                      "Next": "ImportSegmentFailed"
+                      "Next": "ImportFailed"
                     },
                     {
+                      "And": [
+                        {
                       "Variable": "$.Status",
-                      "StringEquals": "COMPLETED",
+                          "StringEquals": "COMPLETED"
+                        },
+                        {
+                          "Variable": "$.create_campaign",
+                          "StringEquals": "True"
+                        }
+                      ],
                       "Next": "CreateCampaign"
+                    },
+                    {
+                      "And": [
+                        {
+                          "Variable": "$.Status",
+                          "StringEquals": "COMPLETED"
+                        },
+                        {
+                            "Not": {
+                                "Variable": "$.create_campaign",
+                                "StringEquals": "True"
+                            }
+                        }
+                      ],
+                      "Next": "ImportSuccess"
                     }
                   ]
                 },
@@ -774,21 +798,21 @@ Resources:
                 },
                 "IsCreateCampaignFinished": {
                   "Type": "Choice",
-                  "Default": "ImportSegmentFailed",
+                  "Default": "ImportFailed",
                   "Choices": [
                     {
                       "Variable": "$.CampaignState",
                       "StringEquals": "SCHEDULED",
-                      "Next": "ImportSegmentSuccess"
+                      "Next": "ImportSuccess"
                     },
                     {
                       "Variable": "$.CampaignState",
                       "StringEquals": "INVALID",
-                      "Next": "ImportSegmentFailed"
+                      "Next": "ImportFailed"
                     }
                   ]
                 },
-                "ImportSegmentSuccess": {
+                "ImportSuccess": {
                   "Type": "Task",
                   "Resource": "arn:aws:states:::sns:publish",
                   "Parameters": {
@@ -808,7 +832,7 @@ Resources:
                   "ResultPath": null,
                   "End": true
                 },
-                "ImportSegmentFailed": {
+                "ImportFailed": {
                   "Type": "Task",
                   "Resource": "arn:aws:states:::sns:publish",
                   "Parameters": {

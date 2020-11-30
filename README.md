@@ -99,6 +99,8 @@ Even though Pinpoint has great API support to stream endpoint data to Pinpoint i
 
 The architecture below will set up an infrastructure to automatically trigger when a new file is placed in an S3 bucket.  The process, managed by an AWS Step Functions state machine, will start a Pinpoint import process, wait for it to complete, and send notifications that the job started, successfully finished, or failed.
 
+Additionally (and optionally), you can choose to use Pinpoint Phone Validation service to automatically markup phone numbers that are clearly invalid. As well as (also optionally) issue an automated message to all of the just imported contacts (i.e. start a new campaign based on the imported file).
+
 For notifications, the below architecture uses SNS which allows for notifications to be sent to humans (ex: Email, SMS) or other systems that can read from the SNS topic.  The notifications include the details of the import job so that quick action can be taken and records of past import jobs can be retained.  The SNS Topic to subscribe to for notifications is found as an output parameter of the CloudFormation template.
 
 With this architecture, development teams can simply save JSON or CSV formatted files for import in the designated S3 location and the process will manage the rest.  It will provide detail logging in CloudWatch and send SNS notifications.
@@ -106,12 +108,14 @@ With this architecture, development teams can simply save JSON or CSV formatted 
 #### Architecture Diagram
 
 ![Screenshot](images/S3_triggered_import.png)
+![Step Functions Screenshot](images/SMS_S3_drop_SF.png)
 
 #### Use-Case
 
 * Nightly Batch Endpoint Updates
 * Ad-hoc Batch Endpoint Updates
 * Triggered Imports with Status Alerts
+* Batch campaigns
 * Operational notifications of import jobs
 
 #### AWS CloudFormation Link
@@ -120,6 +124,7 @@ With this architecture, development teams can simply save JSON or CSV formatted 
 #### Documentation References
 
 * [Importing segments](https://docs.aws.amazon.com/pinpoint/latest/userguide/segments-importing.html)
+* [Validating phone numbers in Amazon Pinpoint](https://docs.aws.amazon.com/pinpoint/latest/developerguide/validate-phone-numbers.html)
 * [Developer Guide Importing segments](https://docs.aws.amazon.com/pinpoint/latest/developerguide/segments-importing.html)
 * [Using AWS Lambda with Amazon S3](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
 * [What Is AWS Step Functions?](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)
