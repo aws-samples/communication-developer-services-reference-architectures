@@ -1,6 +1,25 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Amazon S3 Triggered Amazon Pinpoint Import and Campaign creation (with optional phone validation)
 
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Required Parameters"
+        Parameters: 
+          - PinpointProjectId
+          - FileDropS3Bucket
+          - FileDropS3Prefix
+      - 
+        Label: 
+          default: "Optional Parameters"
+        Parameters: 
+          - AutoCreateCampaign
+          - ValidatePhone
+          - AssumeUS
+          - CampaignDelay
+
 Parameters:
 
   PinpointProjectId:
