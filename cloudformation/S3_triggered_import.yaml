@@ -11,7 +11,6 @@ Metadata:
           - PinpointProjectId
           - FileDropS3Bucket
           - FileDropS3Prefix
-          - CampaignDelay
       - 
         Label: 
           default: "Optional Parameters"
@@ -19,6 +18,7 @@ Metadata:
           - AutoCreateCampaign
           - ValidatePhone
           - AssumeUS
+          - CampaignDelay
 
 Parameters:
 
