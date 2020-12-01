@@ -105,6 +105,8 @@ For notifications, the below architecture uses SNS which allows for notification
 
 With this architecture, development teams can simply save JSON or CSV formatted files for import in the designated S3 location and the process will manage the rest.  It will provide detail logging in CloudWatch and send SNS notifications.
 
+This solution expects a CSV file as per Pinpoint [standard import structure](https://docs.aws.amazon.com/pinpoint/latest/userguide/segments-importing.html), but is designed to automatically assume most fields (columns) to be custom endpoint attributes instead, if the Validate flag is enabled. See [example file](examples/sample_data_S3_triggered_import.csv). If you need to use a different set of column names, please review the processing Lambda function for any potential adjustments.
+
 #### Architecture Diagram
 
 ![Screenshot](images/S3_triggered_import.png)
