@@ -64,14 +64,6 @@ Parameters:
       - False
     Description: Enter TRUE if you want to assume US (+1) phone number for any phone 10 digits long or FALSE if you want to import as-is. Default is TRUE.
 
-  #ImportFileFormat:
-  #  Type: String
-  #  Default: 'CSV'
-  #  AllowedValues:
-  #    - CSV
-  #    - JSON
-  #  Description: Indicates format of import file.  CSV or JSON
-
 Resources:
 
   ## State Machine Lambdas
@@ -79,9 +71,8 @@ Resources:
   ImportSegmentLambdaValidate:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: ImportSegmentLambdaValidateFunction
       Handler: index.lambda_handler
-      Role: !GetAtt ImportSegmentLambdaRole.Arn
+      Role: !GetAtt ImportSegmentLambdaValidateRole.Arn
       Runtime: python3.8
       Timeout: 60
       Environment:
@@ -223,9 +214,8 @@ Resources:
   ImportSegmentLambdaSave:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: ImportSegmentLambdaSaveFunction
       Handler: index.lambda_handler
-      Role: !GetAtt ImportSegmentLambdaRole.Arn
+      Role: !GetAtt ImportSegmentLambdaSaveRole.Arn
       Runtime: python3.8
       Timeout: 60
       Environment:
@@ -331,8 +321,8 @@ Resources:
           FILE_FORMAT: "CSV"
           CREATE_CAMPAIGN: !Ref AutoCreateCampaign
           VALIDATE_PHONE: !Ref ValidatePhone
-          ValidateFunction: ImportSegmentLambdaValidateFunction
-          SaveValidateResult: ImportSegmentLambdaSaveFunction
+          ValidateFunction: !GetAtt ImportSegmentLambdaValidate.Arn
+          SaveValidateResult: !GetAtt ImportSegmentLambdaSave.Arn
       Code:
           ZipFile: |
             import json
@@ -485,8 +475,8 @@ Resources:
                 Action:
                   - "lambda:InvokeFunction"
                 Resource:
-                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:ImportSegmentLambdaValidateFunction"
-                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:ImportSegmentLambdaSaveFunction"
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ImportSegmentLambdaValidate}"
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ImportSegmentLambdaSave}"
   PinpointImportRole:
     Type: AWS::IAM::Role
     Properties:
