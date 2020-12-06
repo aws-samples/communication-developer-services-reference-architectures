@@ -9,6 +9,8 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [SES Auto-Reply](#SES-Auto-Reply)
 * [Amazon Pinpoint Basics](#user-content-amazon-pinpoint-basics)
   * [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports)
+  * [Automatic Phone Number Validate](#Automatic-Phone-Number-Validate)
+  * [Automatic Amazon Pinpoint Campaign Creation](#Automatic-Amazon-Pinpoint-Campaign-Creation)
   * [Pinpoint Event Processing](#Pinpoint-Event-Processing)
   * [Pinpoint S3 Event Database](#Pinpoint-S3-Event-Database)
   * [Pinpoint Message Archiver](#Pinpoint-Message-Archiver)
@@ -21,7 +23,8 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Send-Time Amazon Pinpoint Campaign Attributes](#Send-Time-Amazon-Pinpoint-Campaign-Attributes)
   * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
   * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
-
+* [Combining Multiple References Together](#Combining-Multiple-References-Together)   
+  * [Triggered Imports, Phone Validate, Campaign Create](#Triggered-Imports-Phone-Validate-Campaign-Create)
 ------
 ## Amazon SES Basics
 
@@ -126,6 +129,87 @@ With this architecture, development teams can simply save JSON or CSV formatted 
 * [Tutorial: Subscribing an endpoint to an Amazon SNS topic](https://docs.aws.amazon.com/sns/latest/dg/sns-tutorial-create-subscribe-endpoint-to-topic.html)
 
 ------
+
+### Automatic Phone Number Validate
+
+#### Description
+
+Pinpoint includes a phone number validation service that you can use to determine if a phone number is valid, and to obtain additional information about the phone number itself. For example, when you use the phone number validation service, it returns the following information:
+
+* The phone number in E.164 format.
+* The phone number type (such as mobile, landline, or VoIP).
+* The city and country where the phone number is based.
+* The service provider that's associated with the phone number.
+
+The API is useful for verifying phone numbers provided on a web form, cleaning your existing contact database, or to help determine if SMS is supported for a given phone number allowing you to fallback to Voice if necessary.
+
+The architecture below will setup a Pinpoint segment of all unverified phone numbers by looking for a new endpoint attribute: PNV_PhoneNumberValidated.  When the included State Machine is executed, it will export all the unverified numbers using that segment, perform verification on every number, and write back to Pinpoint as endpoint attributes the result of the API call including endpoints like:  PNV_Carrier, PNV_City, PNV_Country, PNV_PhoneType, PNV_Timezone, PNV_ZipCode, and PNV_PhoneNumberValidated.
+
+This architecture could be triggered from the [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports) architecture above to perform validation on all newly imported endpoints automatically upon import.  This could be done by setting up a Lambda function to listen to the SNS topic published from the import architecture that calls the execute method of the state machine.
+
+#### Architecture Diagram
+
+![Screenshot](images/Phone_number_validate_statemachine.png)
+
+#### Use-Case
+
+* Verifying phone numbers provided on a web form
+* Cleaning your existing contact database
+* Determine best channel (SMS or Voice) for a number
+* Operational notifications of Phone numbers validated
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/Phone_number_validate.yaml)
+
+#### Documentation References
+
+* [Validating phone numbers in Amazon Pinpoint](https://docs.aws.amazon.com/pinpoint/latest/developerguide/validate-phone-numbers.html)
+* [What Is AWS Step Functions?](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)
+* [Tutorial: Subscribing an endpoint to an Amazon SNS topic](https://docs.aws.amazon.com/sns/latest/dg/sns-tutorial-create-subscribe-endpoint-to-topic.html)
+
+------
+
+### Automatic Amazon Pinpoint Campaign Creation
+
+#### Description
+
+Pinpoint's UI allows marketers and non-technical users an easy way to create campaigns. There are times when creating campaigns needs to be done programmatically via the API. Further, this scheduled of campaigns could be event-triggered and also provide operational metrics via SNS notifications to when campaigns are scheduled and include success or failure alerting.
+
+The architecture below will setup a simple State Machine that will execute a campaign immediately using the input state machine input:  
+```
+{
+  "SegmentId": "...",
+  "SegmentName": "...",
+  "SmsTemplateName": "...",
+}
+```
+It will immediately start the campaign and then wait for it to finish providing operational insights in an SNS topic including: Campaign Status, Actual Start Time, Actual Finsih Time, and Successful and Total Endpoint Count.
+
+This architecture could be triggered from the [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports) architecture above to send messages immediately upon an import.  It could be chained with the [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports) and [Automatic Phone Number Validate](#Automatic-Phone-Number-Validate) to send SMS messages after numbers have been imported and then immediately verified for sending.  This can be done by deploying Lambda functions to each SNS topic that initiates the next state machine. See [Triggered Imports, Phone Validate, Campaign Create](#Triggered-Imports-Phone-Validate-Campaign-Create) below.
+
+#### Architecture Diagram
+
+![Screenshot](images/Create_campaign.png)
+
+#### Use-Case
+
+* Automatically fire off messages upon file imports
+* Set up welcome messages to be sent when new files are exported
+* Set up timers to create campaigns on your own schedule
+* Operational notifications of campaign statuses
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/Create_campaign.yaml)
+
+#### Documentation References
+
+* [Creating Campaigns](https://docs.aws.amazon.com/pinpoint/latest/developerguide/campaigns.html)
+* [Campaign Activities](https://docs.aws.amazon.com/pinpoint/latest/apireference/apps-application-id-campaigns-campaign-id-activities.html)
+* [What Is AWS Step Functions?](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)
+* [Tutorial: Subscribing an endpoint to an Amazon SNS topic](https://docs.aws.amazon.com/sns/latest/dg/sns-tutorial-create-subscribe-endpoint-to-topic.html)
+
+------
+
 
 ### Pinpoint Event Processing
 
@@ -492,6 +576,17 @@ This also assumes that an Amazon Connect Instance, Queue, and Contact Flow have 
 * [Automating outbound calling to customers using Amazon Connect](https://aws.amazon.com/blogs/contact-center/automating-outbound-calling-to-customers-using-amazon-connect/)
 * [Connect API - StartOutboundVoiceContact](https://docs.aws.amazon.com/connect/latest/APIReference/API_StartOutboundVoiceContact.html)
 * [IoT Channel Using Amazon Pinpoint](https://aws.amazon.com/solutions/iot-channel-using-amazon-pinpoint/)
+
+----
+
+## Combining Multiple References Together
+
+### Triggered Imports, Phone Validate, Campaign Create
+
+Chaining the [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports), [Automatic Phone Number Validate](#Automatic-Phone-Number-Validate), and [Automatic Amazon Pinpoint Campaign Creation](#Automatic-Amazon-Pinpoint-Campaign-Creation) reference architectures together can create a import pipeline to automatically import files as they land in S3, perform phone number validation on all new numbers, then kick off a campaign automatically.
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/Combining_import_validate_campaign.yaml)
 
 ***
 

@@ -1,0 +1,258 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Pinpoint Combinging S3 Triggered Import, Phone Number Validate, Create Campaign
+
+Parameters:
+
+  PinpointProjectId:
+    Type: String
+    Description: Amazon Pinpoint Project ID trigger a new campaign
+
+  SmsTemplateName:
+    Type: String
+    Description: SMS Template to use when creating the campaign
+
+  ImportStatusSNSTopicArn:
+    Type: String
+    Description: SNS Topic used to provide updates to status. Found in the Outputs of the CloudFormation.
+
+  PhoneValidateStateMachineArn:
+    Type: String
+    Description: The Phone Number Validate State Machine ARN.  Found in the Outputs of the CloudFormation.
+
+  PhoneValidateNotificationTopicArn:
+    Type: String
+    Description: SNS Topic used to provide updates to status. Found in the Outputs of the CloudFormation.
+
+  CampaignCreateStateMachineArn:
+    Type: String
+    Description: The Create Campaign State Machine Arn.  Found in the Outputs of the CloudFormation.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: Campaign Details
+        Parameters:
+          - PinpointProjectId
+          - SmsTemplateName
+      -
+        Label:
+          default: Amazon S3 Triggered Endpoint Imports Reference Architecture Details
+        Parameters:
+          - ImportStatusSNSTopicArn
+      -
+        Label:
+          default: Automatic Phone Number Validate Reference Architecture Details
+        Parameters:
+          - PhoneValidateNotificationTopicArn
+          - PhoneValidateStateMachineArn
+
+      -
+        Label:
+          default: Automatic Amazon Pinpoint Campaign Creation Reference Architecture Details
+        Parameters:
+          - CampaignCreateStateMachineArn
+
+
+Resources:
+
+  ## Trigger Phone Validate from Success Import
+  TriggerPhoneValidate:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt TriggerPhoneValidateRole.Arn
+      Runtime: python3.7
+      Timeout: 60
+      Environment:
+        Variables:
+          LOG_LEVEL: "INFO"
+          PINPOINT_PROJECT_ID: !Ref PinpointProjectId
+          PHONE_VALIDATE_SM_ARN: !Ref PhoneValidateStateMachineArn
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import logging
+          import json
+
+          client = boto3.client('stepfunctions')
+
+          def lambda_handler(event, context):
+            global log_level
+            log_level = str(os.environ.get('LOG_LEVEL')).upper()
+            if log_level not in [
+                                      'DEBUG', 'INFO',
+                                      'WARNING', 'ERROR',
+                                      'CRITICAL'
+                                  ]:
+              log_level = 'ERROR'
+            logging.getLogger().setLevel(log_level)
+
+            logging.info(event)
+
+            for record in event['Records']:
+
+              j = json.loads(record['Sns']['Message'])
+
+              response = client.start_execution(
+                  stateMachineArn=os.environ.get('PHONE_VALIDATE_SM_ARN'),
+                  input=json.dumps(j['ImportResult'])
+              )
+
+              logging.info(response)
+
+            return {
+              'Success': True
+            }
+
+  TriggerPhoneValidateSNSTriggerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt TriggerPhoneValidate.Arn
+      Principal: sns.amazonaws.com
+
+  TriggerPhoneValidateSNSTrigger:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt TriggerPhoneValidate.Arn
+      Protocol: lambda
+      TopicArn: !Ref ImportStatusSNSTopicArn
+      FilterPolicy: "{\"notification_type\": [\"success\"]}"
+
+  TriggerPhoneValidateRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "states:StartExecution"
+                Resource: !Ref PhoneValidateStateMachineArn
+
+  ## Trigger Create Campaign from Phone Verify
+  TriggerCampaignCreate:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt TriggerCampaignCreateRole.Arn
+      Runtime: python3.7
+      Timeout: 60
+      Environment:
+        Variables:
+          LOG_LEVEL: "INFO"
+          PINPOINT_PROJECT_ID: !Ref PinpointProjectId
+          CREATE_CAMPAIGN_SM_ARN: !Ref CampaignCreateStateMachineArn
+          SMS_TEMPLATE_NAME: !Ref SmsTemplateName
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import logging
+          import json
+
+          client = boto3.client('stepfunctions')
+
+          def lambda_handler(event, context):
+            global log_level
+            log_level = str(os.environ.get('LOG_LEVEL')).upper()
+            if log_level not in [
+                                      'DEBUG', 'INFO',
+                                      'WARNING', 'ERROR',
+                                      'CRITICAL'
+                                  ]:
+              log_level = 'ERROR'
+            logging.getLogger().setLevel(log_level)
+
+            logging.info(event)
+
+            for record in event['Records']:
+              j = json.loads(record['Sns']['Message'])
+
+              input = {
+                "SegmentId": j['ValidatePhoneResult']['ValidateInput']['Definition']['SegmentId'],
+                "SegmentName": j['ValidatePhoneResult']['ValidateInput']['Definition']['SegmentName'],
+                "SmsTemplateName": os.environ.get('SMS_TEMPLATE_NAME'),
+              }
+
+              response = client.start_execution(
+                  stateMachineArn=os.environ.get('CREATE_CAMPAIGN_SM_ARN'),
+                  input=json.dumps(input)
+              )
+
+              logging.info(response)
+
+            return {
+              'Success': True
+            }
+
+  TriggerCampaignCreateSNSTriggerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt TriggerCampaignCreate.Arn
+      Principal: sns.amazonaws.com
+
+  TriggerCampaignCreateSNSTrigger:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt TriggerCampaignCreate.Arn
+      Protocol: lambda
+      TopicArn: !Ref PhoneValidateNotificationTopicArn
+      FilterPolicy: "{\"notification_type\": [\"success\"]}"
+
+  TriggerCampaignCreateRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "states:StartExecution"
+                Resource: !Ref CampaignCreateStateMachineArn

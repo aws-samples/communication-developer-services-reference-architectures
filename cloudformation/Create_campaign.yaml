@@ -1,0 +1,339 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Pinpoint Campaign Create
+
+Parameters:
+
+  PinpointProjectId:
+    Type: String
+    Description: Amazon Pinpoint Project ID trigger a new campaign
+
+Resources:
+
+  PinpointCampaignCreate:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt PinpointCampaignCreateRole.Arn
+      Runtime: python3.7
+      Timeout: 60
+      Environment:
+        Variables:
+          LOG_LEVEL: "INFO"
+          PINPOINT_PROJECT_ID: !Ref PinpointProjectId
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import logging
+
+          client = boto3.client('pinpoint')
+
+          def lambda_handler(event, context):
+            global log_level
+            log_level = str(os.environ.get('LOG_LEVEL')).upper()
+            if log_level not in [
+                                      'DEBUG', 'INFO',
+                                      'WARNING', 'ERROR',
+                                      'CRITICAL'
+                                  ]:
+              log_level = 'ERROR'
+            logging.getLogger().setLevel(log_level)
+
+            logging.info(event)
+
+            response = client.create_campaign(
+              ApplicationId=os.environ.get('PINPOINT_PROJECT_ID'),
+              WriteCampaignRequest={
+                'HoldoutPercent': 0,
+                'IsPaused': False,
+                'MessageConfiguration': {
+                  'SMSMessage': {
+                    'MessageType': 'TRANSACTIONAL'
+                  }
+                },
+                'Name': event['SegmentName'],
+                'Schedule': {
+                  'IsLocalTime': False,
+                  'StartTime': 'IMMEDIATE',
+                  'Frequency': 'ONCE',
+                  'Timezone': 'UTC'
+                },
+                'SegmentId': event['SegmentId'],
+                'TemplateConfiguration': {
+                  'SMSTemplate': {
+                    'Name': event['SmsTemplateName']
+                  }
+                }
+              }
+            )
+            logging.info(response)
+
+            return {
+              'CampaignId': response['CampaignResponse']['Id'],
+              'SegmentId': response['CampaignResponse']['SegmentId'],
+              'CampaignStatus': response['CampaignResponse']['State']['CampaignStatus']
+            }
+
+  PinpointCampaignCampaignStatus:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt PinpointCampaignCampaignStatusRole.Arn
+      Runtime: python3.7
+      Timeout: 60
+      Environment:
+        Variables:
+          LOG_LEVEL: "INFO"
+          PINPOINT_PROJECT_ID: !Ref PinpointProjectId
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import logging
+
+          client = boto3.client('pinpoint')
+
+          def lambda_handler(event, context):
+            global log_level
+            log_level = str(os.environ.get('LOG_LEVEL')).upper()
+            if log_level not in [
+                                      'DEBUG', 'INFO',
+                                      'WARNING', 'ERROR',
+                                      'CRITICAL'
+                                  ]:
+              log_level = 'ERROR'
+            logging.getLogger().setLevel(log_level)
+
+            logging.info(event)
+
+            response = client.get_campaign_activities(
+              ApplicationId=os.environ.get('PINPOINT_PROJECT_ID'),
+              CampaignId=event['CampaignId']
+            )
+            logging.info(response)
+
+            activity = response['ActivitiesResponse']['Item'][0]
+
+            return {
+              'CampaignId': activity['CampaignId'],
+              'CampaignStatus': activity['State'],
+              'Result': activity['Result'],
+              'Start': activity['Start'],
+              'End': activity['End'],
+              'SuccessfulEndpointCount': activity['SuccessfulEndpointCount'],
+              'TotalEndpointCount': activity['TotalEndpointCount']
+            }
+
+  PinpointCampaignNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: 'PinpointCreateCampaignNotifications'
+
+  CampaignCreateStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt StateMachineRole.Arn
+      DefinitionString:
+        !Sub
+          - |-
+            {
+              "StartAt": "CreateCampaign",
+              "States": {
+                "CreateCampaign": {
+                  "Type": "Task",
+                  "Resource": "${PinpointCampaignCreateArn}",
+                  "Next": "CampaignWait"
+                },
+                "CampaignWait": {
+                  "Type": "Wait",
+                  "Seconds": 10,
+                  "Next": "CampaignStatus"
+                },
+                "CampaignStatus": {
+                  "Type": "Task",
+                  "Resource": "${PinpointCampaignCampaignStatusArn}",
+                  "Next": "IsCampaignFinished"
+                },
+                "IsCampaignFinished": {
+                  "Type": "Choice",
+                  "Default": "CampaignWait",
+                  "Choices": [
+                    {
+                      "Variable": "$.CampaignStatus",
+                      "StringEquals": "INVALID",
+                      "Next": "CampaignFailed"
+                    },
+                    {
+                      "Variable": "$.CampaignStatus",
+                      "StringEquals": "COMPLETED",
+                      "Next": "CampaignSuccess"
+                    }
+                  ]
+                },
+                "CampaignSuccess": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "CampaignCreateOutput": {
+                      "CampaignId.$": "$.CampaignId",
+                      "CampaignStatus.$": "$.CampaignStatus",
+                      "Result.$": "$.Result",
+                      "Start.$": "$.Start",
+                      "End.$": "$.End",
+                      "SuccessfulEndpointCount.$": "$.SuccessfulEndpointCount",
+                      "TotalEndpointCount.$": "$.TotalEndpointCount"
+                    },
+                    "CampaignCreateInput.$": "$$.Execution.Input"
+                  },
+                  "Next": "EmitSuccess"
+                },
+                "EmitSuccess": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::sns:publish",
+                  "ResultPath": null,
+                  "Parameters": {
+                    "TopicArn": "${SNSTopicArn}",
+                    "Message": {
+                      "Message": "Campaign Create Successful",
+                      "CampaignCreateResult.$": "$"
+                    },
+                    "Subject": "Amazon Pinpoint Campaign Create Successful",
+                    "MessageAttributes": {
+                      "notification_type": {
+                        "DataType": "String",
+                        "StringValue": "success"
+                      }
+                    }
+                  },
+                  "End": true
+                },
+                "CampaignFailed": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::sns:publish",
+                  "Parameters": {
+                    "TopicArn": "${SNSTopicArn}",
+                    "Message": {
+                      "Message": "Campaign Create Failed",
+                      "CampaignCreateResult.$": "$"
+                    },
+                    "Subject": "Amazon Pinpoint Campaign Create Failed",
+                    "MessageAttributes": {
+                        "notification_type": {
+                            "DataType": "String",
+                            "StringValue": "failure"
+                        }
+                    }
+                  },
+                  "End": true
+                }
+              }
+            }
+          - {PinpointCampaignCreateArn: !GetAtt PinpointCampaignCreate.Arn, PinpointCampaignCampaignStatusArn: !GetAtt PinpointCampaignCampaignStatus.Arn, SNSTopicArn: !Ref PinpointCampaignNotificationTopic}
+
+  PinpointCampaignCreateRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "mobiletargeting:CreateCampaign"
+                Resource:
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}/campaigns"
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}"
+
+  PinpointCampaignCampaignStatusRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "mobiletargeting:GetCampaignActivities"
+                Resource:
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}/campaigns/*"
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}"
+
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W76
+            reason: Complex Role that is used for StateMachine to invoke many other lambdas
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "lambda:InvokeFunction"
+                Resource:
+                  - !GetAtt PinpointCampaignCreate.Arn
+                  - !GetAtt PinpointCampaignCampaignStatus.Arn
+              -
+                Effect: "Allow"
+                Action:  sns:Publish
+                Resource: !Ref PinpointCampaignNotificationTopic
+
+Outputs:
+  CampaignCreateStateMachineArn:
+    Description: The Campaign Create State Machine ARN
+    Value: !Ref CampaignCreateStateMachine

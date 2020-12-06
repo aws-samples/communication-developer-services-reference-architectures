@@ -309,13 +309,29 @@ Resources:
                   ]
                 },
                 "ImportSegmentSuccess": {
+                  "Type": "Pass",
+                    "Parameters": {
+                      "ImportOutput": {
+                        "ImportId.$": "$.ImportId",
+                        "SegmentId.$": "$.SegmentId",
+                        "ExternalId.$": "$.ExternalId",
+                        "Status.$": "$.Status",
+                        "ResponseFormatted.$": "$.ResponseFormatted",
+                        "ImportId.$": "$.ImportId"
+                      },
+                      "ImportInput.$": "$$.Execution.Input.S3URL"
+                    },
+                    "Next": "EmitSuccess"
+                },
+                "EmitSuccess": {
                   "Type": "Task",
                   "Resource": "arn:aws:states:::sns:publish",
+                  "ResultPath": null,
                   "Parameters": {
                     "TopicArn": "${SNSTopicArn}",
                     "Message": {
                       "Message": "Import Successful",
-                      "ImportResult.$": "$.ResponseFormatted"
+                      "ImportResult.$": "$.ImportOutput.ResponseFormatted"
                     },
                     "Subject": "Amazon Pinpoint Import Successful",
                     "MessageAttributes": {
@@ -608,6 +624,6 @@ Resources:
       Prefix: !Ref FileDropS3Prefix
 
 Outputs:
-  ImportStatusSNSTopic:
+  ImportStatusSNSTopicArn:
     Description: SNS Topic used to provide updates to status
     Value: !Ref PinpointImportNotificationTopic
