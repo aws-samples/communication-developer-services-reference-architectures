@@ -1,0 +1,6 @@
+ChannelType,Address,FirstName,LastName,Timezone
+SMS,14256791901,John,Smith,CST
+SMS,(202) 555-0191,Ivan,Popov,PST
+SMS,605-555-0198,Mary,Loweless,EST
+SMS,14256791901,Aaron,Slew,CST
+SMS,(+351) 282 43 50 50,Tim,Doe,IST
