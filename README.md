@@ -118,7 +118,7 @@ With this architecture, development teams can simply save JSON or CSV formatted 
 * Operational notifications of import jobs
 
 #### AWS CloudFormation Link
-[CF Template](cloudformation/S3_triggered_import.yaml)
+[CF Template](cloudformation/Amazon_S3_triggered_import.yaml)
 
 #### Documentation References
 
