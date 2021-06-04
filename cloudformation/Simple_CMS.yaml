@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Automaticaly provision and configure the AWS services necessary to deploy
+  an S3 bucket along with CloudFront Distribution to allow for simple hosting of images
+  and attachments for Pinpoint emails or other uses..
+Resources:
+  StaticFiles:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName:
+          Ref: LogBucket
+        LogFilePrefix: simple-cms-s3/
+  LogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+        - id: W35
+          reason: This is the log bucket.
+    Properties:
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: LogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: AWSCloudTrailAclCheck
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: s3:GetBucketAcl
+          Resource:
+            Fn::Sub: arn:aws:s3:::${LogBucket}
+        - Sid: AWSCloudTrailWrite
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: s3:PutObject
+          Resource:
+            Fn::Sub: arn:aws:s3:::${LogBucket}/AWSLogs/${AWS::AccountId}/*
+          Condition:
+            StringEquals:
+              s3:x-amz-acl: bucket-owner-full-control
+        - Sid: LogBucketAllowSSLRequestsOnly
+          Effect: Deny
+          Principal: '*'
+          Action: s3:*
+          Resource:
+          - Fn::Sub: arn:aws:s3:::${LogBucket}/*
+          - Fn::Sub: arn:aws:s3:::${LogBucket}
+          Condition:
+            Bool:
+              aws:SecureTransport: 'false'
+  ReadPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: StaticFiles
+      PolicyDocument:
+        Statement:
+        - Action: s3:GetObject
+          Effect: Allow
+          Resource:
+            Fn::Sub: arn:aws:s3:::${StaticFiles}/*
+          Principal:
+            CanonicalUser:
+              Fn::GetAtt:
+              - CloudFrontOriginAccessIdentity
+              - S3CanonicalUserId
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment:
+          Fn::GetAtt:
+          - StaticFiles
+          - RegionalDomainName
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    DependsOn:
+    - LogBucket
+    - CloudFrontOriginAccessIdentity
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+        - id: W70
+          reason: Using CloudFront Provided Cert which defaults this to TLS1.  Hoping
+            to avoid customer needing to provision cert just to deploy solution.
+    Properties:
+      DistributionConfig:
+        Origins:
+        - DomainName:
+            Fn::GetAtt:
+            - StaticFiles
+            - RegionalDomainName
+          Id:
+            Fn::GetAtt:
+            - StaticFiles
+            - RegionalDomainName
+          S3OriginConfig:
+            OriginAccessIdentity:
+              Fn::Sub: origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}
+        DefaultCacheBehavior:
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          CachedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          Compress: true
+          DefaultTTL: 60
+          ForwardedValues:
+            Cookies:
+              Forward: none
+            QueryString: false
+          MaxTTL: 86400
+          MinTTL: 0
+          SmoothStreaming: false
+          TargetOriginId:
+            Fn::GetAtt:
+            - StaticFiles
+            - RegionalDomainName
+          ViewerProtocolPolicy: redirect-to-https
+        Comment: ''
+        PriceClass: PriceClass_All
+        Enabled: true
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.2_2018
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: none
+        HttpVersion: http2
+        IPV6Enabled: true
+        DefaultRootObject: index.html
+        Logging:
+          Bucket:
+            Fn::GetAtt:
+            - LogBucket
+            - DomainName
+          IncludeCookies: true
+          Prefix: simple-cms-cloudfront
+Outputs:
+  Domain:
+    Description: Cloudfront Domain
+    Value:
+      Fn::GetAtt:
+      - CloudFrontDistribution
+      - DomainName
+  S3Bucket:
+    Description: The S3 Bucket used to store images and attachments
+    Value:
+      Ref: StaticFiles
+  SimpleCMSURL:
+    Description: Use this link to prefix your images and attachments
+    Value:
+      Fn::Sub:
+      - https://${CFDomain}/
+      - CFDomain:
+          Fn::GetAtt:
+          - CloudFrontDistribution
+          - DomainName
