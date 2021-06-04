@@ -500,10 +500,10 @@ To initiate a query, start a step function execution with one of the following E
 ##### For Direct queries that create a sendable import segment for immediate use:
 ```
 {
-  "Query": "SELECT d.endpoint_id AS Id",
+  "Query": "SELECT d.endpoint_id AS Id\r\nFROM some_table WHERE some_clause",
   "Type": "direct",
-  "SegmentName": "FromSteps",
-  "SegmentId": "8b7221384c864dc49693c8a2217c289c"
+  "SegmentName": "Some Segment Name",
+  "SegmentId": "[Previously Imported Segment ID HERE]"
 }
 ```
 
@@ -530,7 +530,7 @@ Further, the step function can also be scheduled to be run on set intervals to e
 * Avoid moving data into Pinpoint Attributes that changes frequently
 
 #### AWS CloudFormation Link
-[CF Template](cloudformation/Advanced_Segmentation_S3.yaml)
+[CF Template](cloudformation/Federated_Segmentation.yaml)
 
 #### Documentation References
 
