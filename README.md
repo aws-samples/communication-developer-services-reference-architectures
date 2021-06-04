@@ -19,7 +19,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
   * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
 * [Amazon Pinpoint Extensibility](#user-content-amazon-pinpoint-extensibility)
-  * [Advanced Segmentation with Amazon S3 and Amazon Athena](#Advanced-Segmentation-with-Amazon-S3-and-Amazon-Athena)
+  * [Federated Segmentation with Amazon Athena](#Federated-Segmentation-with-Amazon-Athena)
   * [Send-Time Amazon Pinpoint Campaign Attributes](#Send-Time-Amazon-Pinpoint-Campaign-Attributes)
   * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
   * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
@@ -447,7 +447,7 @@ Prereqs:
 
 ------
 
-### Advanced Segmentation with Amazon S3 and Amazon Athena
+### Federated Segmentation with Amazon Athena
 
 #### Description
 
@@ -455,16 +455,38 @@ Endpoints stored in Amazon Pinpoint enable customers to store addresses across m
 
 Some segmentation use-cases call for more advanced segmentation rules where simple attribute matching will not be sufficient. In these cases, we can use customer's existing Data Lakes in Amazon S3 with Amazon Athena as a query engine.  With these services, customers can create segments with much more specificity. Ex: Select all Email endpoints where the User has made a purchase of red shoes in the last 3 months and has opened more than 15 emails in the last 9 months and has clicked on the website page showing product details of our upcoming shoe release in the last 24 hours.
 
-One option is to create a static import segment from these results that is updated daily.  Another option, and represented in the diagram below, is to update an Endpoint attribute array `AdvancedSegmentTarget` with a token signaling they match the criteria.  The `AdvancedSegmentTarget` array would then contain the names of all of the advanced segments the endpoint matches.  This allows the dynamic segment to be better used in Journeys and Recurring campaigns.  This process could be set up to refresh daily via Amazon CloudWatch events and orchestrated by AWS Step Function.
+To initiate a query, start a step function execution with one of the following Execution Input (Query is JSON escaped):
+
+##### For Direct queries that create a sendable import segment for immediate use:
+```
+{
+  "Query": "SELECT d.endpoint_id AS Id",
+  "Type": "direct",
+  "SegmentName": "FromSteps",
+  "SegmentId": "8b7221384c864dc49693c8a2217c289c"
+}
+```
+
+##### For Mutating queries that update endpoint attributes for use in Dynamic segments use:
+```
+{
+  "Query": "SELECT d.endpoint_id AS Id, 'True' AS \"Attributes.SomeAttribute\"\r\nFROM some_table WHERE some_clause",
+  "Type": "mutate"
+}
+```
+
+Note, queries need to have an output that matches the Pinpoint import file syntax as the examples above show.
+
+Further, the step function can also be scheduled to be run on set intervals to ensure data in Amazon Pinpoint stays up-to-date by using Amazon CloudWatch event rules.
 
 #### Architecture Diagram
 
-![Screenshot](images/Advanced_Segmentation_S3.png)
+![Screenshot](images/Federated_Segmentation.png)
 
 #### Use-Case
 
 * Advanced segmentation rules
-* Utilize existing S3 Data Lakes
+* Utilize existing S3 Data Lakes or any other Athena supported Federated Query Data Source
 * Avoid moving data into Pinpoint Attributes that changes frequently
 
 #### AWS CloudFormation Link
@@ -473,6 +495,7 @@ One option is to create a static import segment from these results that is updat
 #### Documentation References
 
 * [Amazon S3 as the Data Lake Storage Platform](https://docs.aws.amazon.com/whitepapers/latest/building-data-lakes/amazon-s3-data-lake-storage-platform.html)
+* [Using Amazon Athena Federated Query](https://docs.aws.amazon.com/athena/latest/ug/connect-to-a-data-source.html)
 * [What is Amazon Athena?](https://docs.aws.amazon.com/athena/latest/ug/what-is.html)
 * [How Step Functions Works](https://docs.aws.amazon.com/step-functions/latest/dg/how-step-functions-works.html)
 * [Adding Endpoints to Amazon Pinpoint](https://docs.aws.amazon.com/pinpoint/latest/developerguide/audience-define-endpoints.html)
