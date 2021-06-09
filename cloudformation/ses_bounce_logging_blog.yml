@@ -3,7 +3,7 @@ Description: 'Template to create Lambda function using Cloudformation'
 Parameters:
   CloudWatchGroupName:
     Description: Cloudwatch Group Name for bounce notifications.
-    Default: /aws/ses/bounce_logs           # RJL - moved to an "SES" namespace
+    Default: /aws/ses/bounce_logs
     Type: String
     AllowedPattern: .+
     ConstraintDescription: Cloudwatch Group Name for bounce notifications.
@@ -12,7 +12,7 @@ Parameters:
     Type: String
     AllowedPattern: .+
     ConstraintDescription: Add SNS Topic ARN.
-  EventType:                                # RJL - added to make configurable to work with all 3 event types
+  EventType:
     Description: AWS SES Event Type to log to the CloudWatchGroupName
     Type: String
     Default: Bounce
@@ -46,7 +46,7 @@ Resources:
         Type: 'AWS::Lambda::Function'
         DependsOn: LambdaRole
         Properties:
-            Environment: {Variables: {group_name: !Ref CloudWatchGroupName, event_type: !Ref EventType, LOG_LEVEL: 'INFO'}}  # RJL - added 2 new env variables
+            Environment: {Variables: {group_name: !Ref CloudWatchGroupName, event_type: !Ref EventType, LOG_LEVEL: 'INFO'}}
             Role: !GetAtt LambdaRole.Arn
             Timeout: 60
             Handler: index.lambda_handler
@@ -64,11 +64,11 @@ Resources:
 
                     client = boto3.client('logs')
 
-                    log_group = os.getenv("group_name")                                 # RJL - because of loop below, pulled this out to evaluate once
+                    log_group = os.getenv("group_name")
                     event_type = os.getenv("event_type")
 
                     def lambda_handler(event, context):
-                        global log_level                                                # RJL - added logging
+                        global log_level
                         log_level = str(os.environ.get('LOG_LEVEL')).upper()
                         if log_level not in [
                                                   'DEBUG', 'INFO',
@@ -80,11 +80,11 @@ Resources:
 
                         logging.info(event)
 
-                        for record in event['Records']:                                 # RJL - loop over the records instead of just assuming there is only 1
+                        for record in event['Records']:
                           logs = record['Sns']['Message']
                           logs_data = json.loads(logs)
                           notification_type=logs_data['notificationType']
-                          if(notification_type==event_type):                            # RJL - made this configurable with the new CFN param
+                          if(notification_type==event_type):
                               LOG_GROUP= log_group
                           else:
                               sys.exit()
@@ -115,4 +115,4 @@ Resources:
                               event_log.update({'sequenceToken': response['logStreams'][0] ['uploadSequenceToken']})
                           response = client.put_log_events(**event_log)
 
-                          logging.info(response)                                      # RJL - logged response vs print
+                          logging.info(response)
