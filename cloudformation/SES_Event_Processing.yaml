@@ -20,6 +20,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       VisibilityTimeout: 500
+      KmsMasterKeyId: alias/aws/sqs
 
   SnsSubscription:
     Type: AWS::SNS::Subscription
