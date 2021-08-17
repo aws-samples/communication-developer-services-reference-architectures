@@ -44,6 +44,8 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
       LoggingConfiguration:
         DestinationBucketName: !Ref LogBucket
         LogFilePrefix: pinpoint-event-processing/
@@ -72,6 +74,8 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
 
   LogBucketPolicy:
     Type: AWS::S3::BucketPolicy
