@@ -431,3 +431,4 @@ Resources:
     Properties:
       VisibilityTimeout: 100
       FifoQueue: true
+      KmsMasterKeyId: alias/aws/sqs
