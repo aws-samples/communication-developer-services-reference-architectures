@@ -280,6 +280,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: 'PinpointPhoneValidateNotifications'
+      KmsMasterKeyId: alias/aws/sns
 
   PhoneValidateStateMachine:
     Type: AWS::StepFunctions::StateMachine

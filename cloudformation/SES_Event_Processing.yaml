@@ -15,6 +15,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: SESNotifications
+      KmsMasterKeyId: alias/aws/sns
 
   SESNotificationQueue:
     Type: AWS::SQS::Queue

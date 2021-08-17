@@ -829,6 +829,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: 'PinpointSegmentationQuery'
+      KmsMasterKeyId: alias/aws/sns
 
 Outputs:
   QueryStatusSNSTopicArn:

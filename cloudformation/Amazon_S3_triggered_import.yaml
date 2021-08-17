@@ -245,6 +245,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: 'PinpointImportNotifications'
+      KmsMasterKeyId: alias/aws/sns
 
 
   ImportStateMachine:

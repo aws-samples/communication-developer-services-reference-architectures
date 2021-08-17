@@ -128,6 +128,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: 'PinpointCreateCampaignNotifications'
+      KmsMasterKeyId: alias/aws/sns
 
   CampaignCreateStateMachine:
     Type: AWS::StepFunctions::StateMachine

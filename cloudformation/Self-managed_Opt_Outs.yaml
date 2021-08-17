@@ -26,6 +26,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: 'Two Way SMS'
+      KmsMasterKeyId: alias/aws/sns
       Subscription:
         -
           Endpoint: !GetAtt TwoWaySMSLambda.Arn
