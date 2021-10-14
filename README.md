@@ -663,7 +663,7 @@ This library is licensed under the MIT-0 License. See the LICENSE file.
 ![Screenshot](images/DUE-engageEvents-dashboardauto_x2.jpg)
 
 
-#### Create Quicksight dashboard from Pinpoint/SES events
+#### Create Amazon Quicksight dashboard from Amazon Pinpoint/SES events
 
 #### Solution
 Customers want to view the results of their messaging campaigns in ever increasing levels of granularity and ensure their users see value from the email, SMS or push notifications they receive. Customers also want to analyze how different user segments respond to different messages, and how to optimize subsequent user communication. Previously, customers could only view this data in Pinpoint analytics, which offers robust reporting on: events, funnels, and campaigns. However, does not allow analysis across these different parameters and the building of custom reports. For example, show campaign revenue across different user segments, or show what events were generated after a user viewed a campaign in a funnel analysis. Customers would need to extract this data themselves and do the analysis in excel.
@@ -681,6 +681,6 @@ User segmentation based on: 
 * Build funnels that shows user progression.
 
 #### AWS CloudFormation Link
-[CF Template](cloudformation/Event-dashboard.yaml)
+[CF Template](cloudformation/Event_dashboard.yaml)
 
 
