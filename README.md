@@ -16,6 +16,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Pinpoint Message Archiver](#Pinpoint-Message-Archiver)
   * [Add / Remove from Segments via Event Activity](#add--remove-from-segments-via-event-activity)
   * [Simple CMS or Static Website Host](#simple-cms-or-static-website-host)
+  * [Digital User Engagement Events Dashboard](#digital-user-engagement-events-dashboard)
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
   * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
@@ -414,6 +415,32 @@ Using AWS CloudFront will quickly distribute files from a geographic edge locati
 
 ------
 
+### Digital User Engagement Events Dashboard
+
+#### Create Amazon Quicksight dashboard with Amazon Pinpoint/SES events
+
+#### Description
+Customers want to view the results of their messaging campaigns in ever increasing levels of granularity and ensure their users see value from the email, SMS or push notifications they receive. Customers also want to analyze how different user segments respond to different messages, and how to optimize subsequent user communication. Previously, customers could only view this data in Pinpoint analytics, which offers robust reporting on: events, funnels, and campaigns. However, does not allow analysis across these different parameters and the building of custom reports. For example, show campaign revenue across different user segments, or show what events were generated after a user viewed a campaign in a funnel analysis. Customers would need to extract this data themselves and do the analysis in excel.
+
+This Solution uses the Athena tables created by [Digital user engagement events database solution  Event database solution](https://aws.amazon.com/solutions/implementations/digital-user-engagement-events-database/) . The AWS CloudFormation template given in this post automatically sets up the different architecture components, to capture detailed notifications about Amazon Pinpoint engagement events and log those in Amazon Athena in the form of Athena views. You still need to manually configure Amazon Quicksight dashboards to link to these newly generated Athena views.
+
+#### Architecture Diagram
+![Screenshot](images/DUE-engageEvents-dashboardauto_x2.jpg)
+
+#### Use case(s)
+  * Deep dive into engagement insights. (eg: SMS events, Email events, Campaign events, Journey events) 
+  * The ability to view engagement events at the individual user level.
+  * Data/process mining turn raw event data into useful marking insights.
+  * User engagement benchmarking and end user event funneling.
+  * User engagement benchmarking and funneling
+  * Compute campaign conversions (post campaign user analysis to show campaign effectiveness)
+  * Build funnels that shows user progression.
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/Event_dashboard.yaml)
+
+------
+
 
 ## Amazon Pinpoint SMS
 
@@ -658,29 +685,9 @@ Chaining the [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoin
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
 
-### Digital-user-engagement-events-Dashboard
-
-![Screenshot](images/DUE-engageEvents-dashboardauto_x2.jpg)
 
 
-#### Create Amazon Quicksight dashboard from Amazon Pinpoint/SES events
 
-#### Solution
-Customers want to view the results of their messaging campaigns in ever increasing levels of granularity and ensure their users see value from the email, SMS or push notifications they receive. Customers also want to analyze how different user segments respond to different messages, and how to optimize subsequent user communication. Previously, customers could only view this data in Pinpoint analytics, which offers robust reporting on: events, funnels, and campaigns. However, does not allow analysis across these different parameters and the building of custom reports. For example, show campaign revenue across different user segments, or show what events were generated after a user viewed a campaign in a funnel analysis. Customers would need to extract this data themselves and do the analysis in excel.
 
-This Solution uses the Athena tables created by [Digital user engagement events database solution  Event database solution](https://aws.amazon.com/solutions/implementations/digital-user-engagement-events-database/) . The AWS CloudFormation template given in this post automatically sets up the different architecture components, to capture detailed notifications about Amazon Pinpoint engagement events and log those in Amazon Athena in the form of Athena views. You still need to manually configure Amazon Quicksight dashboards to link to these newly generated Athena views.
-
-#### Use case(s)
-User segmentation based on: 
-* Deep dive into engagement insights. (eg: SMS events, Email events, Campaign events, Journey events) 
-* The ability to view engagement events at the individual user level.
-* Data/process mining turn raw event data into useful marking insights.
-* User engagement benchmarking and end user event funneling.
-* User engagement benchmarking and funneling
-* Compute campaign conversions (post campaign user analysis to show campaign effectiveness)
-* Build funnels that shows user progression.
-
-#### AWS CloudFormation Link
-[CF Template](cloudformation/Event_dashboard.yaml)
 
 
