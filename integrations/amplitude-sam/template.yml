@@ -1,0 +1,255 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  amplitude-sam
+
+# Transform section specifies one or more macros that AWS CloudFormation uses to process your template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-section-structure.html
+Transform:
+- AWS::Serverless-2016-10-31
+
+Parameters:
+
+  PinpointProjectId:
+    Type: String
+    Description: Amazon Pinpoint Project ID to import into
+
+  FileDropS3Bucket:
+    Type: String
+    Description: Name of the S3 Bucket to create for file drops
+
+  FileDropS3Prefix:
+    Type: String
+    Description: Prefix of the Amazon S3 Bucket where new import files will be placed.
+    Default: 'input/'
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # This is an SQS queue with all default configuration properties. To learn more about the available options, see
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-sqs-queues.html
+  SimpleQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 30
+      FifoQueue: true
+      ReceiveMessageWaitTimeSeconds: 5
+      KmsMasterKeyId: 'alias/aws/sqs'
+  
+  # This is the Lambda function definition associated with the source code: sqs-payload-logger.js. For all available properties, see
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  SQSPayloadLogger:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: A Lambda function that logs the payload of messages sent to an associated SQS queue.
+      Runtime: nodejs14.x
+      Handler: src/handlers/sqs-queue-processor/index.handler
+      # This property associates this Lambda function with the SQS queue defined above, so that whenever the queue
+      # receives a message, the Lambda function is invoked
+      Events:
+        SQSQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SimpleQueue.Arn
+            BatchSize: 10
+      MemorySize: 128
+      Timeout: 25 # Chosen to be less than the default SQS Visibility Timeout of 30 seconds
+      Environment:
+        Variables:
+          LOG_LEVEL: "info"
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+          - Sid: PinpointPutEvents
+            Effect: Allow
+            Action: 
+              - "mobiletargeting:PutEvents"
+              - "mobiletargeting:UpdateEndpoint"
+              - "mobiletargeting:GetEndpoint"
+              - "mobiletargeting:GetUserEndpoints"
+              - "mobiletargeting:DeleteEndpoint"
+              - "mobiletargeting:UpdateEndpointsBatch"
+            Resource:
+              - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}*"
+              - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}"
+
+  ## S3 Bucket
+  AppBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+        - id: W51
+          reason: Bucket Policy will be applied as part of integration with Amplitude CDP integration. See https://help.amplitude.com/hc/en-us/articles/360051952812-Sync-Amplitude-cohorts-to-Amazon-S3
+    Properties:
+      BucketName: !Ref FileDropS3Bucket
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName:
+          Ref: LogBucket
+        LogFilePrefix: 
+          Fn::Sub: ${FileDropS3Bucket}-logs
+  LogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+        - id: W35
+          reason: This is the log bucket.
+    Properties:
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: LogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: AWSCloudTrailAclCheck
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: s3:GetBucketAcl
+          Resource:
+            Fn::Sub: arn:aws:s3:::${LogBucket}
+        - Sid: AWSCloudTrailWrite
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: s3:PutObject
+          Resource:
+            Fn::Sub: arn:aws:s3:::${LogBucket}/AWSLogs/${AWS::AccountId}/*
+          Condition:
+            StringEquals:
+              s3:x-amz-acl: bucket-owner-full-control
+        - Sid: LogBucketAllowSSLRequestsOnly
+          Effect: Deny
+          Principal: '*'
+          Action: s3:*
+          Resource:
+          - Fn::Sub: arn:aws:s3:::${LogBucket}/*
+          - Fn::Sub: arn:aws:s3:::${LogBucket}
+          Condition:
+            Bool:
+              aws:SecureTransport: 'false'
+
+  ## S3 Trigger Lambda
+  S3NotificationLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/s3-trigger-processor/index.handler
+      Role: !GetAtt S3NotificationLambdaFunctionRole.Arn
+      Runtime: nodejs14.x
+      MemorySize: 512
+      Timeout: 60
+      Environment:
+        Variables:
+          LOG_LEVEL: "info"
+          PINPOINT_APP_ID: !Ref PinpointProjectId
+          SQS_QUEUE_URL: !Ref SimpleQueue
+      Events:
+        S3NewObjectEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref AppBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: !Ref FileDropS3Prefix
+                  - Name: suffix
+                    Value: ".tar.gz"
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt S3NotificationLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::${FileDropS3Bucket}'
+
+  S3NotificationLambdaFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              -
+                Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+                Resource: 
+                  - !Sub "arn:aws:s3:::${FileDropS3Bucket}"
+                  - !Sub "arn:aws:s3:::${FileDropS3Bucket}/*"
+              -
+                Effect: Allow
+                Action:
+                  - "mobiletargeting:GetSegmentVersion"
+                  - "mobiletargeting:GetSegment"
+                  - "mobiletargeting:GetSegments"
+                  - "mobiletargeting:GetSegmentVersions"
+                  - "mobiletargeting:CreateSegment"
+                Resource:
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}*"
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}"
+              -
+                Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt SimpleQueue.Arn
+
+Outputs:
+  S3Bucket: 
+    Description: 'The S3 Bucket used to drop files'
+    Value: !Ref 'AppBucket'

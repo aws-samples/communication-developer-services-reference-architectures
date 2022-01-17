@@ -1,0 +1,15 @@
+{
+  "name": "sqs-queue-processor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.936.0",
+    "loglevel": "^1.7.1"
+  }
+}
