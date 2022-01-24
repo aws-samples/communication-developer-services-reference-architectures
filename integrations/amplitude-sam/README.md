@@ -6,6 +6,9 @@ This SAM application provides infrastructure to toake Amplitude user cohort expo
 
 ![Architecture](Architecture.png)
 
+## Data Retention Considerations
+Note that the files written to S3 in the architecture would remain indefinitely.  It's recommended that you implement S3 Lifecycle policies to remove these files based on your particular information security and data retention requirements.  See [Managing your storage lifecyle](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html) for more information.
+
 ## Prerequisites
 * [A Pinpoint Project](https://docs.aws.amazon.com/pinpoint/latest/userguide/gettingstarted-create-project.html)
 * AWS CLI - [Install the AWS CLI](https://aws.amazon.com/cli/).
