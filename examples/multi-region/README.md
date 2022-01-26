@@ -42,7 +42,7 @@ A majority of this document discusses Pinpoint, however when talking about sendi
         
         When using Dedicated IPs, ISPs expect to see [predictable and consistent](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/dedicated-ip.html#dedicated-ip-sending-patterns) sending from an IP Address.  Since Dedicated IP addresses are specific to single AWS Account and Region, independent set of IPs are required for each region in question. Imagine things from an ISP perspective when a bulk of the sending through the year comes from a pool of Dedicated IP Addresses, and during a fail-over scenario that traffic shifts to a different set of cold IP addresses.  To an ISP, this can look suspicious.
         
-        SES offers the ability to [Auto Warm IP addresses](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/dedicated-ip-warming.html), however this process can take 30-45 days, during which any additional volume that the IP wasn't "ready for" yet is sent via Shared IPs.  **In order to maintain predictable and consistent sending from a warmed Dedicated IP address, customers should implement an** [**Active-Active multi-region architecture**](#pinpoint-ses-active-active)**.**  
+        SES offers the ability to [Auto Warm IP addresses](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/dedicated-ip-warming.html), however this process can take 30-45 days, during which any additional volume that the IP wasn't "ready for" yet is sent via Shared IPs.  **In order to maintain predictable and consistent sending from a warmed Dedicated IP address, customers should implement an** [**Active-Active multi-region architecture**](#pinpointses-active-active)**.**  
 
 ### SMS Considerations
 
@@ -92,7 +92,7 @@ Customers may want to fail over to an alternate region for several reasons:
 * Synchronous API faults after some level of [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html). 
 * Issues with Asynchronous delivery of email or SMS
     * [Email Delivery Delays](https://docs.aws.amazon.com/ses/latest/dg/event-publishing-retrieving-firehose-contents.html#event-publishing-retrieving-firehose-delivery-delay-object) - Note: Customers should not fail over due to delivery delay related to an ISP outage, as the same issue will manifest in the other SES region.
-    * [SMS Carrier Availability Issues](#pinpoint-ses-active-active)
+    * [SMS Carrier Availability Issues](#pinpointses-active-active)
 * Lack of event notifications in general (e.g. low volume or missing data alert)
 
 Pinpoint and SES can be configured to send metrics to CloudWatch so alerts can be created for the scenarios above:
@@ -106,7 +106,7 @@ Pinpoint and SES can be configured to send metrics to CloudWatch so alerts can b
 
 ### Architecture
 
-![Multi-Region Architectures - Pinpoint - Active-Active](images/Multi-Region Architectures - Pinpoint - Active-Active.png)
+![Multi-Region Architectures - Pinpoint - Active-Active](images/pinpoint-active-active.png)
 
 1. Pinpoint/SES traffic is equally split across both active regions.  If there are [excessive errors](#when-to-failover-) in one region after some [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html) then all traffic should be routed to the other region.  This could also be a manual configuration to switch traffic to a single region. Note the following configurations will need to be consistent across regions:
     1. **Email Identities** (From Domain) - Any sending domains will need to be verified and properly configured across different regions.  This will require multiple DNS records to verify the domains for the different regions.
@@ -133,7 +133,7 @@ Pinpoint and SES can be configured to send metrics to CloudWatch so alerts can b
 
 ### Architecture
 
-![Multi-Region Architectures - Pinpoint - Active-Passive](images/Multi-Region Architectures - Pinpoint - Active-Passive.png)
+![Multi-Region Architectures - Pinpoint - Active-Passive](images/pinpoint-active-passive.png)
 
 1. Pinpoint/SES traffic is sent to Primary region  If there are [excessive errors](#when-to-failover-) in primary region after some [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html) then all traffic should be routed to the other region.  This could also be a manual configuration to switch traffic to a single region. Note the following configurations will need to be consistent across regions:
     1. **Email Identities** (From Domain) - Any sending domains will need to be verified and properly configured across different regions.  This will require multiple DNS records to verify the domains for the different regions.
@@ -169,7 +169,7 @@ SES supports an [Account Level Suppression List](https://docs.aws.amazon.com/ses
 
 When managing endpoints via the Pinpoint API it will be important to make sure endpoints are added/updated in both regions:
 
-![Multi-Region Architectures - Endpoint Imports - API](images/Multi-Region Architectures - Endpoint Imports - API.png)
+![Multi-Region Architectures - Endpoint Imports - API](images/endpoint-imports-api.png)
 
 ### Batch via S3
 
@@ -178,11 +178,11 @@ If managing Pinpoints via exports from an Customer System of Record or AWS Datal
 For Active-Active and Warm Standby this can be done in parallel by writing the Endpoint CSV/JSON files to multiple S3 buckets and implementing the following reference architecture to import the endpoints based on seeing the file dropped to S3:
 https://github.com/aws-samples/digital-user-engagement-reference-architectures#amazon-s3-triggered-endpoint-imports
 
-![Multi-Region Architectures - Endpoint Imports - S3 Active-Active](images/Multi-Region Architectures - Endpoint Imports - S3 Active-Active.png)
+![Multi-Region Architectures - Endpoint Imports - S3 Active-Active](images/endpoint-imports-s3-active-active.png)
 
 If just using a Warm-Stand by architecture, you could also consider having a recurring export of endpoints from the primary region into the warm standby region by exporting segments out of the primary region into an S3 bucket in the standby region and again using the reference architecture above to import the file when it’s dropped on S3:
 
-![Multi-Region Architectures - Endpoint Imports - S3 Active-Passive](images/Multi-Region Architectures - Endpoint Imports - S3 Active-Passive.png)
+![Multi-Region Architectures - Endpoint Imports - S3 Active-Passive](images/endpoint-imports-s3-active-passive.png)
 
 ### SES List Replication
 
@@ -190,7 +190,7 @@ If just using a Warm-Stand by architecture, you could also consider having a rec
 
 Using the SES Event Stream you can monitor for Hard Bounce, Complaint and Subscription events so that other regions can be kept in sync. In an Active-Active a similar process should be implemented in the other direction to keep both regions in sync.
 
-![Multi-Region Architectures - SES - Event Based List Sync](images/Multi-Region Architectures - SES - Event Based List Sync .png)
+![Multi-Region Architectures - SES - Event Based List Sync](images/ses-event-based-list-sync.png)
 
 #### Batch
 
@@ -211,7 +211,7 @@ https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams.html
 
 The following architecture demonstrates changing the Pinpoint SMS configuration to use a different origination number at a project level.  When using the SendMessage API, you can also change which origination number is used if you detect carrier issues.
 
-![Picture1](images/Picture1.png)
+![Picture1](images/picture1.png)
 
 ### Documentation References
 
