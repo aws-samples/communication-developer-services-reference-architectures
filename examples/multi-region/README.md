@@ -92,7 +92,7 @@ Customers may want to fail over to an alternate region for several reasons:
 * Synchronous API faults after some level of [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html). 
 * Issues with Asynchronous delivery of email or SMS
     * [Email Delivery Delays](https://docs.aws.amazon.com/ses/latest/dg/event-publishing-retrieving-firehose-contents.html#event-publishing-retrieving-firehose-delivery-delay-object) - Note: Customers should not fail over due to delivery delay related to an ISP outage, as the same issue will manifest in the other SES region.
-    * [SMS Carrier Availability Issues](#pinpointses-active-active)
+    * [SMS Carrier Availability Issues](#using-multiple-sms-origination-numbers-for-redundancy)
 * Lack of event notifications in general (e.g. low volume or missing data alert)
 
 Pinpoint and SES can be configured to send metrics to CloudWatch so alerts can be created for the scenarios above:
@@ -108,7 +108,7 @@ Pinpoint and SES can be configured to send metrics to CloudWatch so alerts can b
 
 ![Multi-Region Architectures - Pinpoint - Active-Active](images/pinpoint-active-active.png)
 
-1. Pinpoint/SES traffic is equally split across both active regions.  If there are [excessive errors](#when-to-failover-) in one region after some [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html) then all traffic should be routed to the other region.  This could also be a manual configuration to switch traffic to a single region. Note the following configurations will need to be consistent across regions:
+1. Pinpoint/SES traffic is equally split across both active regions.  If there are [excessive errors](#when-to-failover) in one region after some [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html) then all traffic should be routed to the other region.  This could also be a manual configuration to switch traffic to a single region. Note the following configurations will need to be consistent across regions:
     1. **Email Identities** (From Domain) - Any sending domains will need to be verified and properly configured across different regions.  This will require multiple DNS records to verify the domains for the different regions.
     2. **SMS Origination Numbers** (Long Code, TFN, 10DLC, Short Code) - If SMS origination numbers are provisioned to an account, then equivalent numbers to support failover volume will need to be provisioned in the other region.
         
@@ -135,7 +135,7 @@ Pinpoint and SES can be configured to send metrics to CloudWatch so alerts can b
 
 ![Multi-Region Architectures - Pinpoint - Active-Passive](images/pinpoint-active-passive.png)
 
-1. Pinpoint/SES traffic is sent to Primary region  If there are [excessive errors](#when-to-failover-) in primary region after some [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html) then all traffic should be routed to the other region.  This could also be a manual configuration to switch traffic to a single region. Note the following configurations will need to be consistent across regions:
+1. Pinpoint/SES traffic is sent to Primary region  If there are [excessive errors](#when-to-failover) in primary region after some [exponential backoff](https://docs.aws.amazon.com/general/latest/gr/api-retries.html) then all traffic should be routed to the other region.  This could also be a manual configuration to switch traffic to a single region. Note the following configurations will need to be consistent across regions:
     1. **Email Identities** (From Domain) - Any sending domains will need to be verified and properly configured across different regions.  This will require multiple DNS records to verify the domains for the different regions.
     2. **SMS Origination Numbers** (Long Code, TFN, 10DLC, Short Code) - If SMS origination numbers are provisioned to an account, then equivalent numbers to support failover volume will need to be provisioned in the other region.
         
@@ -196,7 +196,7 @@ Using the SES Event Stream you can monitor for Hard Bounce, Complaint and Subscr
 
 The following demonstrates an example architecture to replicate SES Account Level Supression or Subscription Lists to another region.  In an Active-Active a similar process should be implemented in the other direction to keep both regions in sync.
 
-![Multi-Region Architectures - SES - List Replication](images/Multi-Region Architectures - SES - List Replication.png)
+![Multi-Region Architectures - SES - List Replication](images/ses-list-replication.png)
 
 ## Using Multiple SMS Origination Numbers for Redundancy
 
