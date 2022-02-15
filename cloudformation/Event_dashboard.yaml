@@ -237,7 +237,7 @@ Resources:
                               )
 
                               if get_query_response['QueryExecution']['Status']['State'] == 'SUCCEEDED' or get_query_response['QueryExecution']['Status']['State'] == 'FAILED':
-                                  logging.info('Query Result for Satya check1: %s' % (q['Name']), get_query_response)
+                                  logging.info('Query Result : %s' % (q['Name']), get_query_response)
                                   break
                   except Exception as error:
                       logging.error('execute_named_queries error: %s' % (error))
@@ -246,7 +246,7 @@ Resources:
 
               def lambda_handler(event, context):
                   body = {
-                      "message": "Go Serverless v1.0! Your function executed successfully- Satya - 2!",
+                      "message": "Go Serverless v1.0! Your function executed successfully !",
                       "input": event
                   }
                   '''
