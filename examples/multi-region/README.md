@@ -17,7 +17,7 @@ The [Reliability Pillar](https://docs.aws.amazon.com/wellarchitected/latest/reli
 
 ## Do you need a Multi-Region architecture?
 
-We believe that for the vast majority of customer workloads, the highly resilient regional design of AWS is the best way for customers to achieve their availability goals. Operating across multiple AZs within a Region is a best practice and allows customers to achieve very high availability, including the ability to maintain availability during the vast majority of events. This is how Amazon.com has run and still runs today.
+We believe that for the vast majority of customer workloads, the highly resilient regional design of AWS is the best way for customers to achieve their availability goals. Operating across multiple AZs within a Region is a best practice and allows customers to achieve very high availability, including the ability to maintain availability during the vast majority of events. 
 
 That said, we do think it's important for customers to carefully architect to avoid single points of failure. Customers with very high availability requirements (for example, mission-critical applications that cannot tolerate any downtime) can use AWS across multiple Regions to provide further resiliency against regional failures. Determining the right design requires understanding an application's business criticality, dependencies, workload volumes, and the nature of the work it performs. We have customers with workloads that operate with multi-Region resiliency on AWS, and these customers have achieved extremely high availability. This approach requires customers to make deeper investments to build their applications and regularly test their failover capabilities.
 
