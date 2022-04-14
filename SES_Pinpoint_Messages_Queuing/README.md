@@ -1,4 +1,4 @@
-# aws-email-queuing
+# SES_Pinpoint_Messages_Queuing
 
 ## Description
 
