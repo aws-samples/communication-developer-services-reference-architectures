@@ -17,7 +17,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Add / Remove from Segments via Event Activity](#add--remove-from-segments-via-event-activity)
   * [Simple CMS or Static Website Host](#simple-cms-or-static-website-host)
   * [Digital User Engagement Events Dashboard](#digital-user-engagement-events-dashboard)
-  * [Pinpoint / SES messages queuing](#pinpoint-ses-messages-queuing)
+  * [Pinpoint / SES messages queuing](#pinpoint--ses-messages-queuing)
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
   * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
