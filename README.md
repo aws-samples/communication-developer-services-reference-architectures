@@ -17,6 +17,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Add / Remove from Segments via Event Activity](#add--remove-from-segments-via-event-activity)
   * [Simple CMS or Static Website Host](#simple-cms-or-static-website-host)
   * [Digital User Engagement Events Dashboard](#digital-user-engagement-events-dashboard)
+  * [Pinpoint / SES messages queuing](#pinpoint-ses-messages-queuing)
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
   * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
@@ -441,6 +442,26 @@ This Solution uses the Athena tables created by [Digital user engagement events 
 
 ------
 
+### Pinpoint / SES messages queuing
+
+#### Description
+Amazon SES and Amazon Pinpoint API operations for sending messages, don't have a queuing mechanism. If your application exceeds the allocated throughput limits (messages per second), then the API will return a throttling error message Maximum sending rate exceeded. 
+
+This solution takes advantages of an Amazon SQS Standard Queue and Lambda triggers ensuring that the allocated SES or Pinpoint throughput is being fully utilized while any throttling errors are being handled by writing the message back to the queue. The solution deploys an additional AWS Lambda function, which is invoked every minute by an EventBridge rule and writes an X number of messages defined by the user to the SQS Standard Queue. The messages written to the SQS Standard Queue are being send to an SES simulator address and all relevant metrics such as number of emails send, delivered, number of message written to the SQS etc. are reported on an Amazon Cloudwatch dashboard. Based on the Amazon Cloudwatch dashboard the user should configure the SQS batch and Lambda trigger concurrency so that the solution utilizes the full allocated throughput. Once the above have been configured the production application can write the messages directly to the SQS Standard Queue.
+
+This solution is written in Python and uses a CloudFormation Template. It is fully configured for SES and requires minimum amendments for Pinpoint.
+
+#### Architecture Diagram
+![Screenshot](SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
+
+#### Use case(s)
+  * Queue SES / Pinpoint messages and handle any throttling errors
+  * Store messages that are not being send due to an error in a dead letter queue for later processing or analysis
+
+#### GitHub repository with detailed ReadMe and AWS CloudFormation template
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/SES_Pinpoint_Messages_Queuing)
+
+------
 
 ## Amazon Pinpoint SMS
 
