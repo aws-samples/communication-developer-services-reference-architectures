@@ -2,7 +2,9 @@
 Organizations today are in search of vetted solutions and architectural guidance to rapidly solve business challenges. Whether customers prefer off-the-shelf deployments, or customizable architectures, The Pinpoint and SES solutions below are architectures that can be deployed directly to an account using CloudFormation templates.  Each solution has gone through a Well-Architected and Security review.
 
 ## Table of Contents
-* [Amazon SES Basics](#digital-user-engagement-events-database)
+* [Digital User Engagement Events Database](#digital-user-engagement-events-database)
+* [Amazon Pinpoint Preference Center](#amazon-pinpoint-preference-center)
+* [Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker](#predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker)
 
 ## Digital User Engagement Events Database
 
@@ -21,3 +23,41 @@ The Digital User Engagement Events Database solution is a reference implementati
 - [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/digital-user-engagement-events-database/deployment.html)
 - [Github Repo](https://github.com/awslabs/digital-user-engagement-events-database)
 - [Solution Page](https://aws.amazon.com/solutions/implementations/digital-user-engagement-events-database/?did=sl_card&trk=sl_card)
+
+
+## Amazon Pinpoint Preference Center
+
+### Architecture
+![Architecture](amazon-pinpoint-preference-center-arch-diagram.27719954c8638a8569a88b5448edab04d932b953.png)
+
+### Overview
+Amazon Pinpoint Preference Center guides Amazon Pinpoint customers in building a web application that helps end users to choose their communication preferences. By collecting communication preferences, Amazon Pinpoint customers can send targeted communications to their end users based on their preferred communication channels and interests.
+
+Until now, Amazon Pinpoint customers had to develop their own preference centers or extract preference data from other systems to collect end user communication preferences. With Amazon Pinpoint Preference Center, customers now have a guidance that accurately segments their end users.
+
+To address legal or regulatory requirements, for example, CAN-SPAM Act, this solution provides end users the option to opt out of receiving marketing communications.
+
+### Documentation References
+- [Implementation Guide](https://docs.aws.amazon.com/solutions/latest/amazon-pinpoint-preference-center/overview.html)
+- [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/digital-user-engagement-events-database/deployment.html)
+- [Github Repo](https://github.com/awslabs/amazon-pinpoint-preference-center)
+- [Solution Page](https://aws.amazon.com/solutions/implementations/amazon-pinpoint-preference-center/?did=sl_card&trk=sl_card)
+
+
+## Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker
+
+### Architecture
+![Architecture](predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker-architecture.b6341ce6d26ce5a90d4984f1060c27d17d3b7f95.png)
+
+### Overview
+Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker combines Amazon Pinpoint with Amazon SageMaker to help automate the process of collecting customer data and creating Amazon Pinpoint segments identified by Machine Learning (ML) for tailored audience messaging. These segments can include users predicted to churn, users predicted to make a purchase, and other predicted user behaviors relevant to your business needs.
+
+This Guidance includes a sample dataset that you can use as a reference to develop your own custom ML models using your own data.
+
+Deploying [Digital User Engagement Events Database](#digital-user-engagement-events-database) is a prerequisite to deploying this Guidance.
+
+### Documentation References
+- [Implementation Guide](https://docs.aws.amazon.com/solutions/latest/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker/overview.html)
+- [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker/deployment.html)
+- [Github Repo](https://github.com/awslabs/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker)
+- [Solution Page](https://aws.amazon.com/solutions/implementations/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker/?did=sl_card&trk=sl_card)
