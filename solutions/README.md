@@ -6,6 +6,9 @@ Organizations today are in search of vetted solutions and architectural guidance
 * [Amazon Pinpoint Preference Center](#amazon-pinpoint-preference-center)
 * [Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker](#predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker)
 * [Predictive User Engagement](#predictive-user-engagement)
+* [Location-Based Notifications Using Amazon Pinpoint](#location-based-notifications-using-amazon-pinpoint)
+
+
 
 ## Digital User Engagement Events Database
 
@@ -78,3 +81,25 @@ This Guidance is designed to provide a simple architecture to demonstrate how to
 - [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/predictive-user-engagement/deployment.html)
 - [Github Repo](https://github.com/awslabs/predictive-user-engagement)
 - [Solution Page](https://aws.amazon.com/solutions/implementations/predictive-user-engagement/?did=sl_card&trk=sl_card)
+
+
+## Location-Based Notifications Using Amazon Pinpoint
+
+### Architecture
+![Architecture](architectures/location-based-notifications-pinpoint-ra.a89caa813efd5e212ea1295bfec42561c25f32a3.png)
+
+### Overview
+The Location-Based Notifications Using Amazon Pinpoint guidance allows you to engage with your customers based on their location. You can use this guidance to create and manage geographic boundaries (geofences) around businesses or points of interest. These geofences help you customize your engagement campaigns by sending push notifications to your customers when they enter or exit a geofence. For example, you can send a notification when a customer is walking to meet their rideshare, or when they enter an airport to check-in for a flight.
+
+This guidance provides the following features:
+
+A new Amazon Pinpoint project with push notifications enabled (both iOS and Android devices are supported out-of-the-box)
+An Amazon Cognito user pool created to provide authentication to the solution’s APIs and administration website
+A secure administration website that enables you to quickly and easily manage geofences and create personalized message templates for each location
+A Kibana dashboard to display analytics and provide near real-time feedback
+
+### Documentation References
+- [Implementation Guide](https://docs.aws.amazon.com/solutions/latest/location-based-notifications-using-amazon-pinpoint/overview.html)
+- [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/location-based-notifications-using-amazon-pinpoint/deployment.html)
+- [Github Repo](https://github.com/awslabs/location-based-notifications-using-amazon-pinpoint)
+- [Solution Page](https://aws.amazon.com/solutions/implementations/location-based-notifications-using-amazon-pinpoint/?did=sl_card&trk=sl_card)
