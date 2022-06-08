@@ -5,6 +5,7 @@ Organizations today are in search of vetted solutions and architectural guidance
 * [Digital User Engagement Events Database](#digital-user-engagement-events-database)
 * [Amazon Pinpoint Preference Center](#amazon-pinpoint-preference-center)
 * [Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker](#predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker)
+* [Predictive User Engagement](#predictive-user-engagement)
 
 ## Digital User Engagement Events Database
 
@@ -61,3 +62,19 @@ Deploying [Digital User Engagement Events Database](#digital-user-engagement-eve
 - [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker/deployment.html)
 - [Github Repo](https://github.com/awslabs/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker)
 - [Solution Page](https://aws.amazon.com/solutions/implementations/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker/?did=sl_card&trk=sl_card)
+
+## Predictive User Engagement
+
+### Architecture
+![Architecture](architectures/predictive-user-engagement-architecture.7e3bdd3b55e962e74e3c638f68fc0e88beb98c3a.png)
+
+### Overview
+Predictive User Engagement provides a simple architecture that automates the process of making predictive recommendations based on user activity in Amazon Personalize, and updating Amazon Pinpoint endpoints with those recommendations.
+
+This Guidance is designed to provide a simple architecture to demonstrate how to use ML to make product recommendations and automatically update your endpoints and segments. You can build upon this architecture for a variety of use cases.
+
+### Documentation References
+- [Implementation Guide](https://docs.aws.amazon.com/solutions/latest/predictive-user-engagement/overview.html)
+- [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/predictive-user-engagement/deployment.html)
+- [Github Repo](https://github.com/awslabs/predictive-user-engagement)
+- [Solution Page](https://aws.amazon.com/solutions/implementations/predictive-user-engagement/?did=sl_card&trk=sl_card)
