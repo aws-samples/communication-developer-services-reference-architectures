@@ -6,8 +6,7 @@ Organizations today are in search of vetted solutions and architectural guidance
 * [Amazon Pinpoint Preference Center](#amazon-pinpoint-preference-center)
 * [Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker](#predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker)
 * [Predictive User Engagement](#predictive-user-engagement)
-* [Location-Based Notifications Using Amazon Pinpoint]
-(#location-based-notifications-using-amazon-pinpoint)
+* [Location-Based Notifications Using Amazon Pinpoint](#location-based-notifications-using-amazon-pinpoint)
 * [IoT Channel Using Amazon Pinpoint](#iot-channel-using-amazon-pinpoint)
 
 
