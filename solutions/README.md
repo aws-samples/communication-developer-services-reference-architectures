@@ -28,7 +28,7 @@ The Digital User Engagement Events Database solution is a reference implementati
 ## Amazon Pinpoint Preference Center
 
 ### Architecture
-![Architecture](amazon-pinpoint-preference-center-arch-diagram.27719954c8638a8569a88b5448edab04d932b953.png)
+![Architecture](architectures/amazon-pinpoint-preference-center-arch-diagram.27719954c8638a8569a88b5448edab04d932b953.png)
 
 ### Overview
 Amazon Pinpoint Preference Center guides Amazon Pinpoint customers in building a web application that helps end users to choose their communication preferences. By collecting communication preferences, Amazon Pinpoint customers can send targeted communications to their end users based on their preferred communication channels and interests.
@@ -39,7 +39,7 @@ To address legal or regulatory requirements, for example, CAN-SPAM Act, this sol
 
 ### Documentation References
 - [Implementation Guide](https://docs.aws.amazon.com/solutions/latest/amazon-pinpoint-preference-center/overview.html)
-- [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/digital-user-engagement-events-database/deployment.html)
+- [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/amazon-pinpoint-preference-center/deployment.html)
 - [Github Repo](https://github.com/awslabs/amazon-pinpoint-preference-center)
 - [Solution Page](https://aws.amazon.com/solutions/implementations/amazon-pinpoint-preference-center/?did=sl_card&trk=sl_card)
 
@@ -47,7 +47,7 @@ To address legal or regulatory requirements, for example, CAN-SPAM Act, this sol
 ## Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker
 
 ### Architecture
-![Architecture](predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker-architecture.b6341ce6d26ce5a90d4984f1060c27d17d3b7f95.png)
+![Architecture](architectures/predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker-architecture.b6341ce6d26ce5a90d4984f1060c27d17d3b7f95.png)
 
 ### Overview
 Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker combines Amazon Pinpoint with Amazon SageMaker to help automate the process of collecting customer data and creating Amazon Pinpoint segments identified by Machine Learning (ML) for tailored audience messaging. These segments can include users predicted to churn, users predicted to make a purchase, and other predicted user behaviors relevant to your business needs.
