@@ -6,7 +6,9 @@ Organizations today are in search of vetted solutions and architectural guidance
 * [Amazon Pinpoint Preference Center](#amazon-pinpoint-preference-center)
 * [Predictive Segmentation Using Amazon Pinpoint and Amazon SageMaker](#predictive-segmentation-using-amazon-pinpoint-and-amazon-sagemaker)
 * [Predictive User Engagement](#predictive-user-engagement)
-* [Location-Based Notifications Using Amazon Pinpoint](#location-based-notifications-using-amazon-pinpoint)
+* [Location-Based Notifications Using Amazon Pinpoint]
+(#location-based-notifications-using-amazon-pinpoint)
+* [IoT Channel Using Amazon Pinpoint](#iot-channel-using-amazon-pinpoint)
 
 
 
@@ -103,3 +105,17 @@ A Kibana dashboard to display analytics and provide near real-time feedback
 - [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/location-based-notifications-using-amazon-pinpoint/deployment.html)
 - [Github Repo](https://github.com/awslabs/location-based-notifications-using-amazon-pinpoint)
 - [Solution Page](https://aws.amazon.com/solutions/implementations/location-based-notifications-using-amazon-pinpoint/?did=sl_card&trk=sl_card)
+
+## IoT Channel Using Amazon Pinpoint
+
+### Architecture
+![Architecture](architectures/iot-channel-using-amazon-pinpoint-architecture.61f861b69135996efd52ec971a9f352d7e2786d7.png)
+
+### Overview
+This solution combines Amazon Pinpoint with AWS Lambda to help automate the process of segmenting customers and sending targeted messages to their connected devices through an IoT channel. 
+
+### Documentation References
+- [Implementation Guide](https://docs.aws.amazon.com/solutions/latest/iot-channel-using-amazon-pinpoint/overview.html)
+- [Deployment Guide](https://docs.aws.amazon.com/solutions/latest/iot-channel-using-amazon-pinpoint/deployment.html)
+- [Github Repo](https://github.com/awslabs/iot-channel-using-amazon-pinpoint)
+- [Solution Page](https://aws.amazon.com/solutions/implementations/iot-channel-using-amazon-pinpoint/?did=sl_card&trk=sl_card)
