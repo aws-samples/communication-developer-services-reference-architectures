@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amazon Pinpoint Custom Channel Hello World AWS lambda function written in nodejs.
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  PinpointProjectId:
+    Type: String
+    Description:  Amazon Pinpoint Project ID if one already exists, leave blank to provide permissions to all Pinpoint Applications.
+    AllowedPattern: '^[a-zA-Z0-9*]*$'
+    Default: '*'
+
+  CustomChannelFunctionName:
+    Type: String
+    Description: Amazon Pinpoint custom channel lambda function name.
+
+
+Conditions:
+  KeyNameExist: !Not [!Equals [!Ref CustomChannelFunctionName,""]]
+
+Resources:
+  CustomChannelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName : !If [KeyNameExist, !Ref CustomChannelFunctionName, !Ref "AWS::NoValue"]
+      CodeUri: customchannel/
+      Handler: app.handler
+      Runtime: nodejs14.x
+      Timeout: 60
+
+  PinpointInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CustomChannelFunction
+      Principal: !Sub pinpoint.${AWS::Region}.amazonaws.com
+      SourceArn: !Sub 
+          - arn:${AWS::Partition}:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${AppID}/*
+          - AppID: !Ref PinpointProjectId
+
+Outputs:
+  CustomChannelFunctionArn:
+    Description: "A function invoked by an Amazon Pinpoint Campaign or Journey."
+    Value: !GetAtt CustomChannelFunction.Arn

@@ -1,0 +1,15 @@
+{
+  "name": "customchannel",
+  "version": "1.0.0",
+  "description": "A function invoked by an Amazon Pinpoint Campaign or Journey",
+  "main": "app.js",
+  "scripts": {
+    "test": "mocha tests/unit/"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chai": "^4.3.6",
+    "mocha": "^10.0.0"
+  }
+}
