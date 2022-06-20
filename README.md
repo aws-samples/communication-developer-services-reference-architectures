@@ -21,6 +21,7 @@ A repository of reference architectures for AWS Digital User Engagement services
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
   * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
+  * [SMS Retry for Failed Deliveries] (#SMS-Retry-for-Failed-Deliveries)
 * [Amazon Pinpoint Extensibility](#user-content-amazon-pinpoint-extensibility)
   * [Federated Segmentation with Amazon Athena](#Federated-Segmentation-with-Amazon-Athena)
   * [Send-Time Amazon Pinpoint Campaign Attributes](#Send-Time-Amazon-Pinpoint-Campaign-Attributes)
@@ -530,6 +531,18 @@ Prereqs:
 * [Using AWS Lambda with Amazon S3](https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html)
 
 ------
+
+### SMS Retry for Failed Deliveries
+
+#### Description
+
+Organizations in many sectors and verticals have user bases to whom they send transactional SMS messages such as OTPs, Notices, or transaction/purchase confirmations, among other things. Amazon Pinpoint enables customers to send transactional SMS messages to a global audience through a single API endpoint, and the messages are routed to recipients by the service. Amazon Pinpoint relies on downstream SMS providers and Telecom infrastructure to deliver the messages. While most of the times the SMS messages gets delivered to recipients but sometimes these messages could not get delivered due to carrier/telecom related issues which impacts customer’s brand name. As a result, customers must implement a solution that allows them to retry the transmission of SMS messages that fail owing to transitory problems caused by downstream SMS providers or telecom operators.
+
+#### Use-Case
+
+* Resend any OTP, Confirmation messages that failed get delivered
+* Resend transactional messages.
+
 
 ## Amazon Pinpoint Extensibility
 
