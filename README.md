@@ -538,14 +538,19 @@ Prereqs:
 
 Organizations in many sectors and verticals have user bases to whom they send transactional SMS messages such as OTPs, Notices, or transaction/purchase confirmations, among other things. Amazon Pinpoint enables customers to send transactional SMS messages to a global audience through a single API endpoint, and the messages are routed to recipients by the service. Amazon Pinpoint relies on downstream SMS providers and Telecom infrastructure to deliver the messages. While most of the times the SMS messages gets delivered to recipients but sometimes these messages could not get delivered due to carrier/telecom related issues which impacts customer’s brand name. As a result, customers must implement a solution that allows them to retry the transmission of SMS messages that fail owing to transitory problems caused by downstream SMS providers or telecom operators.
 
-#### AWS CloudFormation Link
-[CF Template](cloudformation/SMS-Retry)
+#### Architecture Diagram
+
+![Screenshot](images/SMS-retry-mechanism.png)
+
 
 #### Use-Case
 
 * Resend any OTP, Confirmation messages that failed get delivered
 * Resend transactional messages.
+* Resend Important campaigns that are failed due to transient reasons. 
 
+#### AWS CloudFormation Link
+[CF Template](cloudformation/SMS-Retry)
 
 ## Amazon Pinpoint Extensibility
 
