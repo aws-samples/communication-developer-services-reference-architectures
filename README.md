@@ -21,7 +21,7 @@ A repository of reference architectures for AWS Digital User Engagement services
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
   * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
-  * [SMS Retry for Failed Deliveries] (#SMS-Retry-for-Failed-Deliveries)
+  * [SMS Retry for Failed Deliveries](#SMS-Retry-for-Failed-Deliveries)
 * [Amazon Pinpoint Extensibility](#user-content-amazon-pinpoint-extensibility)
   * [Federated Segmentation with Amazon Athena](#Federated-Segmentation-with-Amazon-Athena)
   * [Send-Time Amazon Pinpoint Campaign Attributes](#Send-Time-Amazon-Pinpoint-Campaign-Attributes)
