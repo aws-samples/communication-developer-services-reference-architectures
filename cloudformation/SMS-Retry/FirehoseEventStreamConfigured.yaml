@@ -47,21 +47,21 @@ Resources:
             import datetime
             import os
             import string
-             
             pinpoint_client = boto3.client('pinpoint')
             ddb_client = boto3.client('dynamodb')
-
+             
+             
             ddb_table = os.environ['dynamodbStateTableName']
             application_id = os.environ['pinpointApplicationId']
             message_type = os.environ['messageType']
             destination_number = os.environ['destinationNumber']
-
+             
             def lambda_handler(event, context):
-                
+               
                 message = ("Sample body of SMS sent from Lambda at "+ str(datetime.datetime.now()))
                 destinationNumber = destination_number
                 application_message_id = ''.join(random.choices(string.ascii_uppercase +string.digits, k = 7))
-
+             
                 try:
                     response = pinpoint_client.send_messages(
                         ApplicationId=application_id,
@@ -88,7 +88,8 @@ Resources:
                             'application_message_id': {'S' : application_message_id},
                             'pinpoint_message_id'  :{'S' : response['MessageResponse']['Result'][destinationNumber]['MessageId']},
                             'message_body':{'S' : message},
-                            'retry_count' :{'N': '0'}
+                            'retry_count' :{'N': '0'},
+                            'all_retries_failed' :{'BOOL': False}
                         }
                     )
                 except ClientError as e:
@@ -168,28 +169,27 @@ Resources:
             import boto3
             import json
             import os
-
+             
             ddb_client = boto3.client('dynamodb')
             pinpoint_client = boto3.client('pinpoint')
             ddb_table = os.environ['dynamodbStateTableName']
             pinpoint_application_id = os.environ['pinpointApplicationId']
             max_retries = int(os.environ['maxRetries'])
-
+             
             def lambda_handler(event, context):
                 #print(event)
-                output = []
                 try:
-                    for record in event['records']:
-                        payload = base64.b64decode(record['data']).decode('utf-8')
+                    for record in event['Records']:
+                        payload = base64.b64decode(record['kinesis']['data']).decode('utf-8')
                         json_payload = json.loads(payload)
                         #print(json_payload)
-                        
+                       
                         event_type = json_payload['event_type']
                         record_status = json_payload['attributes']['record_status']
-                        message_id = json_payload['attributes']['message_id']     
+                        message_id = json_payload['attributes']['message_id']    
                         destination_number_to_resend_sms = json_payload['attributes']['destination_phone_number']
                         application_message_id = json.loads(json_payload['attributes']['customer_context'])['application_message_id']
-                        
+                       
                         if event_type == '_SMS.FAILURE':
                             if record_status=='UNREACHABLE' or record_status=='UNKNOWN' or record_status=='CARRIER_UNREACHABLE' or record_status=='TTL_EXPIRED' or record_status=='BLOCKED':
                                 ddb_response = ddb_client.get_item(
@@ -198,8 +198,8 @@ Resources:
                                 )
                                 message_body = ddb_response['Item']['message_body']['S']
                                 retry_count = int(ddb_response['Item']['retry_count']['N'])
-                                
-                                #if a pinpoint SMS fails and its a genuine record_status, we retry 5 times as default, configurable via maxRetries environment variable. 
+                               
+                                #if a pinpoint SMS fails and its a genuine record_status, we retry 5 times as default, configurable via maxRetries environment variable.
                                 if (retry_count < max_retries):
                                     # retry
                                     pinpoint_response = pinpoint_client.send_messages(
@@ -223,7 +223,7 @@ Resources:
                                     )
                                     message_id_after_retry = pinpoint_response['MessageResponse']['Result'][destination_number_to_resend_sms]['MessageId']
                                     print("Retry attempt number "+str(retry_count)+ " for application_message_id " +application_message_id+ " . New pinpoint_message_id after retry is " +message_id_after_retry +" . Updating DynamoDB table now")
-                                    
+                                   
                                     # retry done, increment retry_count and update pinpoint_message_id of new attempt in DynamoDB
                                     response = ddb_client.update_item(
                                         TableName=ddb_table,
@@ -244,43 +244,31 @@ Resources:
                                         ReturnValues='UPDATED_NEW',
                                     )
                                     print("DynamoDB update completed")
-
-                                    # dont emit this event back to firehose
-                                    print("Not ingesting this record back to delivery stream as the retry logic is successfully implemented")
-                                    output_record = {
-                                        'recordId': record['recordId'],
-                                        'result': 'Dropped',
-                                        'data': base64.b64encode(payload.encode('utf-8'))
-                                    }
                                 else:
+                                    # Placing final flag in the dynamo DB
+                                    response = ddb_client.update_item(
+                                        TableName=ddb_table,
+                                        UpdateExpression='SET all_retries_failed = :all_retries_failed_expression',
+                                        ExpressionAttributeValues={
+                                            ':all_retries_failed_expression': {
+                                                "BOOL": True
+                                            }
+                                        },
+                                        Key={
+                                            'application_message_id': {
+                                                'S': application_message_id,
+                                            }
+                                        },
+                                        ReturnValues='UPDATED_NEW',
+                                    )
                                     print('Performed enough retries i.e. ' +str(max_retries)+ ' giving up now')
-                                    # emit this event back to firehose
-                                    output_record = {
-                                        'recordId': record['recordId'],
-                                        'result': 'Ok',
-                                        'data': base64.b64encode(payload.encode('utf-8'))
-                                    }
                             else:
                                 print('shouldnt retry this type of Pinpoint error')
-                                # emit this event back to firehose
-                                output_record = {
-                                    'recordId': record['recordId'],
-                                    'result': 'Ok',
-                                    'data': base64.b64encode(payload.encode('utf-8'))
-                                }
                         else:
                             print('not a SMS related Pinpoint failure event')
-                            # emit this event back to firehose
-                            output_record = {
-                                'recordId': record['recordId'],
-                                'result': 'Ok',
-                                'data': base64.b64encode(payload.encode('utf-8'))
-                            }
-                        output.append(output_record)
                 except Exception as e:
                     print (e)
-                print('Successfully processed {} records.'.format(len(event['records'])))
-                return {'records': output}
+                return 'Successfully processed {} records.'.format(len(event['Records']))
       Handler: index.lambda_handler
       FunctionName: !Join
       - "-"
@@ -342,6 +330,14 @@ Resources:
               Action:
               - firehose:*
               Resource: arn:aws:firehose:*:*:*
+        - PolicyName: allowPutRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - iam:PutRolePolicy
+              Resource: !Join ['', ["arn:aws:iam::", !Ref AWS::AccountId, ":role/*"]]
         - PolicyName: allowPinpointAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -361,6 +357,60 @@ Resources:
             import boto3
             import cfnresponse
 
+            firehose_client = boto3.client('firehose')
+            iam_client = boto3.client('iam')
+
+            def add_trans_lambda_to_fhose(event,streamName,firehose_client,firehose_response,responseData,iam_client):
+              transformationLambdaARN = event['ResourceProperties']['TransformationLambda']
+              if "S3DestinationDescription" in firehose_response['DeliveryStreamDescription']['Destinations'][0]:
+                response = firehose_client.update_destination(
+                  DeliveryStreamName=streamName,
+                  CurrentDeliveryStreamVersionId=firehose_response['DeliveryStreamDescription']['VersionId'],
+                  DestinationId=firehose_response['DeliveryStreamDescription']['Destinations'][0]['DestinationId'],
+                  ExtendedS3DestinationUpdate={
+                    'ProcessingConfiguration': {
+                      'Enabled': True,
+                      'Processors': [
+                        {
+                          'Type': 'Lambda',
+                          'Parameters': [
+                            {
+                              'ParameterName': 'LambdaArn',
+                              'ParameterValue': transformationLambdaARN
+                            },
+                          ]
+                        },
+                      ]
+                    }
+                  }
+                )
+                responseData['Data'] = "Added a transformation lambda to existing Kinesis Firehose stream"
+              else:
+                responseData['Data'] = "This Amazon Kinesis Data Firehose has a non S3 destination, exiting without modifying existing Pinpoint event stream pipeline"
+              
+              #Modify IAM role to add Lambda invovke inline policy
+              elements = firehose_response['DeliveryStreamDescription']['Destinations'][0]['ExtendedS3DestinationDescription']['RoleARN'].split(':')
+              
+              '''
+                Following condition validates if the firehose has Service role - Arrary length =3
+                eg:- "role/service-role/KinesisFirehoseServiceRole-PUT-S3-E-ap-southeast-1-1652xxxxxxxx"
+                If its an custom created role then the array length shall be 2.
+                Eg:- "role/event-db1-PinpointKinesisFirehoseRole-1I1IUxxxxxx"
+              '''
+              iam_elements = elements[5].split('/')
+              if (len(iam_elements) == 2):
+                iam_role_attached_to_firehose = iam_elements[1]
+              else :
+                iam_role_attached_to_firehose = iam_elements[2]
+
+              response = iam_client.put_role_policy(
+                PolicyDocument='{"Version":"2012-10-17","Statement":{"Effect": "Allow", "Action": ["lambda:InvokeFunction", "lambda:GetFunctionConfiguration" ],"Resource": ["'+transformationLambdaARN+'"]}}',
+                PolicyName='AllowLambdaInvoke',
+                RoleName=iam_role_attached_to_firehose
+              )
+
+              return responseData
+
             def lambda_handler(event, context):
                 try:
                   responseData = {}
@@ -368,7 +418,6 @@ Resources:
                     responseData['Data'] = "Stack being deleted, do nothing"
                     cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
                     
-
                   else:
                     projectID = event['ResourceProperties']['PinpointProjectID']
 
@@ -384,75 +433,32 @@ Resources:
                       #determine firehose id from pinpoint id and add RetryLambdaFunction as trans lambda
                       #if trans already exists then send a string msg via 'Data' to stack output
 
-                      firehose_client = boto3.client('firehose')
                       streamName = elements[5].split('/')[1]
 
                       firehose_response = firehose_client.describe_delivery_stream(
                           DeliveryStreamName=streamName
                       )
 
-                      processingConfigured = firehose_response['DeliveryStreamDescription']['Destinations'][0]['ExtendedS3DestinationDescription']['ProcessingConfiguration']['Enabled']
-                      
-                      
-                      if processingConfigured:
-                        responseData['Data'] = "This Amazon Kinesis Data Firehose already has a transformation lambda configured, exiting without modifying existing Pinpoint event stream pipeline"
-                        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
-
-                      else:
-                        transformationLambdaARN = event['ResourceProperties']['TransformationLambda']
-                          
-                        if "S3DestinationDescription" in firehose_response['DeliveryStreamDescription']['Destinations'][0]:
-                          response = firehose_client.update_destination(
-                            DeliveryStreamName=streamName,
-                            CurrentDeliveryStreamVersionId=firehose_response['DeliveryStreamDescription']['VersionId'],
-                            DestinationId=firehose_response['DeliveryStreamDescription']['Destinations'][0]['DestinationId'],
-                            ExtendedS3DestinationUpdate={
-                              'ProcessingConfiguration': {
-                                'Enabled': True,
-                                'Processors': [
-                                  {
-                                    'Type': 'Lambda',
-                                    'Parameters': [
-                                      {
-                                        'ParameterName': 'LambdaArn',
-                                        'ParameterValue': transformationLambdaARN
-                                      },
-                                    ]
-                                  },
-                                ]
-                              }
-                            }
-                          )
-                          responseData['Data'] = "Added a transformation lambda to existing Kinesis Firehose stream"
-                          cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      dict = firehose_response['DeliveryStreamDescription']['Destinations'][0]['ExtendedS3DestinationDescription']
+                      if 'ProcessingConfiguration' in dict.keys():
+                    
+                        processingConfigured = firehose_response['DeliveryStreamDescription']['Destinations'][0]['ExtendedS3DestinationDescription']['ProcessingConfiguration']['Enabled']
                         
-                        else:
-                          responseData['Data'] = "This Amazon Kinesis Data Firehose has a non S3 destination, exiting without modifying existing Pinpoint event stream pipeline"
+                        if processingConfigured:
+                          responseData['Data'] = "This Amazon Kinesis Data Firehose already has a transformation lambda configured, exiting without modifying existing Pinpoint event stream pipeline"
                           cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
-                     
+
+                        else:
+                          responseData = add_trans_lambda_to_fhose(event,streamName,firehose_client,firehose_response,responseData,iam_client)
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+                      else:
+                        responseData = add_trans_lambda_to_fhose(event,streamName,firehose_client,firehose_response,responseData,iam_client)
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+
                 except Exception as e:
                     print(e)
                     responseData['Data'] = str(e)
                     cfnresponse.send(event, context, cfnresponse.FAILED, responseData)
-                   
-
-            def parse_arn(arn):
-              elements = arn.split(':')
-              
-              result = {'arn': elements[0],
-                      'partition': elements[1],
-                      'service': elements[2],
-                      'region': elements[3],
-                      'account': elements[4]
-                     }
-              if len(elements) == 7:
-                  result['resourcetype'], result['resource'] = elements[5:]
-              elif '/' not in elements[5]:
-                  result['resource'] = elements[5]
-                  result['resourcetype'] = None
-              else:
-                  result['resourcetype'], result['resource'] = elements[5].split('/')
-              return result
 
       FunctionName: !Join
       - "-"
@@ -472,3 +478,21 @@ Resources:
       Handler: index.lambda_handler
       Role: !GetAtt HelperLambdaExecutionRole.Arn
       Timeout: 900   
+
+Outputs:
+
+  ProducerLambda:
+    Description: The example lambda function that acts as SMS producer for Pinpoint
+    Value: !Ref PinpointDDBProducerLambdaFunction
+
+  DDBStateTable:
+    Description: The DynamoDB table where SMS producer lambda stores it's send state and retry lambda reads to perform Pinpoint retry
+    Value: !Ref DynamoDBTable
+
+  RetryLambda:
+    Description: The lambda function to perform Pinpoint retry using DynamoDB state table and Pinpoint _SMS.FAILURE event 
+    Value: !Ref RetryLambdaFunction
+
+  TransformationLambdaState:
+    Description: The result of adding retry logic as transformation lambda to delivery stream 
+    Value: !GetAtt AddTransformationLambdaToExistingDeliveryStream.Data

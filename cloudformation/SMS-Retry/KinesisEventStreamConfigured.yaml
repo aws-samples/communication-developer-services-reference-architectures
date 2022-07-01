@@ -88,7 +88,8 @@ Resources:
                             'application_message_id': {'S' : application_message_id},
                             'pinpoint_message_id'  :{'S' : response['MessageResponse']['Result'][destinationNumber]['MessageId']},
                             'message_body':{'S' : message},
-                            'retry_count' :{'N': '0'}
+                            'retry_count' :{'N': '0'},
+                            'all_retries_failed' :{'BOOL': False}
                         }
                     )
                 except ClientError as e:
@@ -253,7 +254,23 @@ Resources:
                                     )
                                     print("DynamoDB update completed")
                                 else:
-                                    print('Performed enough retries i.e. ' +str(max_retries)+ ' giving up now')
+                                    # Placing final flag in the dynamo DB
+                                  response = ddb_client.update_item(
+                                    TableName=ddb_table,
+                                    UpdateExpression='SET all_retries_failed = :all_retries_failed_expression',
+                                    ExpressionAttributeValues={
+                                          ':all_retries_failed_expression': {
+                                           "BOOL": True
+                                          }
+                                    },
+                                    Key={
+                                          'application_message_id': {
+                                              'S': application_message_id,
+                                          }
+                                    },
+                                    ReturnValues='UPDATED_NEW',
+                                  )
+                                  print('Performed enough retries i.e. ' +str(max_retries)+ ' giving up now')
                             else:
                                 print('shouldnt retry this type of Pinpoint error')
                         else:
