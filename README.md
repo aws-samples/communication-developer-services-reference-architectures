@@ -18,6 +18,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Simple CMS or Static Website Host](#simple-cms-or-static-website-host)
   * [Digital User Engagement Events Dashboard](#digital-user-engagement-events-dashboard)
   * [Pinpoint / SES messages queuing](#pinpoint--ses-messages-queuing)
+  * [Pinpoint Journey Copying Mechanism](#Pinpoint-Journey-Copying-Mechanism)
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
   * [Sending SMS Triggered by S3 File Drop](#Sending-SMS-Triggered-by-S3-File-Drop)
@@ -460,6 +461,25 @@ This solution is written in Python and uses a CloudFormation Template. It is ful
 
 #### GitHub repository with detailed ReadMe and AWS CloudFormation template
 [GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/SES_Pinpoint_Messages_Queuing)
+
+------
+
+### Pinpoint Journey Copying Mechanism
+
+#### Description
+Amazon Pinpoint Campaigns, Journeys and Segments are Project specific resources and cannot be copied between Projects. This can become a blocker when Amazon Pinpoint is used from multiple teams who would like to share existing resources or when migrating between projects or AWS Regions. To achieve the above Amazon Pinpoint users need to re-create these assets in the new Amazon Pinpoint Project. This is a manual task that takes time and it is prone to human error.
+
+This solution utilizes AWS CloudFormation that invokes an AWS Lambda function upon deployment, which copies the specified Journeys from one Amazon Pinpoint Project to another. The solution can also copy journeys between AWS regions and have them created either in an existing Amazon Pinpoint Project or a new one.
+
+#### Architecture Diagram
+![Pinpoint Journey Copying Mechanism](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Journey_Copy_Mechanism/PinpointJourneyCopyProcess.png)
+
+#### Use case(s)
+  * Migration of Amazon Pinpoint Journeys from an old or staging Project to a new or production Project
+  * Marketing teams that are working in different Pinpoint Projects can share existing Journeys between them
+
+#### GitHub repository with detailed ReadMe and AWS CloudFormation template
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/Pinpoint_Journey_Copy_Mechanism)
 
 ------
 
