@@ -38,7 +38,7 @@ Resources:
     Condition: NoEventStreamConfigured
     Properties:
       TemplateURL: >-
-        https://s3.amazonaws.com/sms-retry-bucket/child-cfs/NoEventStreamConfigured.yaml
+        https://d2908q01vomqb2.cloudfront.net/artifacts/BusinessApplications/2022/08/sim-D30841386/NoEventStreamConfigured.yaml
       Parameters:
         PinpointApplicationId: !Ref PinpointApplicationId
   
@@ -47,7 +47,7 @@ Resources:
     Condition: KinesisEventStreamConfigured
     Properties:
       TemplateURL: >-
-        https://s3.amazonaws.com/sms-retry-bucket/child-cfs/KinesisEventStreamConfigured.yaml
+        https://d2908q01vomqb2.cloudfront.net/artifacts/BusinessApplications/2022/08/sim-D30841386/KinesisEventStreamConfigured.yaml
       Parameters:
         PinpointApplicationId: !Ref PinpointApplicationId
      
@@ -56,6 +56,6 @@ Resources:
     Condition: FirehoseEventStreamConfigured
     Properties:
       TemplateURL: >-
-        https://s3.amazonaws.com/sms-retry-bucket/child-cfs/FirehoseEventStreamConfigured.yaml
+        https://d2908q01vomqb2.cloudfront.net/artifacts/BusinessApplications/2022/08/sim-D30841386/FirehoseEventStreamConfigured.yaml
       Parameters:
         PinpointApplicationId: !Ref PinpointApplicationId

@@ -27,6 +27,8 @@ Resources:
       AttributeDefinitions: 
         - AttributeName: application_message_id
           AttributeType: S
+      SSESpecification:
+        SSEEnabled: True
       KeySchema: 
         - AttributeName: application_message_id
           KeyType: HASH
@@ -138,6 +140,10 @@ Resources:
                 - !Ref "AWS::StackId"
       RetentionPeriodHours: 24
       ShardCount: 1
+      StreamEncryption:  
+        EncryptionType: KMS
+        KeyId: 'alias/aws/kinesis'
+
 
   RetryLambdaExecutionRole:
     DependsOn: 
