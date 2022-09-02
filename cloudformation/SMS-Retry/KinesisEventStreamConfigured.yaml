@@ -145,8 +145,10 @@ Resources:
             Statement:
             - Effect: Allow
               Action:
-              - logs:*
-              Resource: arn:aws:logs:*:*:*
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
             - Effect: Allow
               Action:
               - dynamodb:GetItem
