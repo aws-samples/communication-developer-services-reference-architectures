@@ -1,0 +1,61 @@
+Description:  This template deploys Amazon Kinesis Data Firehose with Transformation Lambda to trigger SMS retry on _SMS.FAILURE event for UNREACHABLE, UNKNOWN, CARRIER_UNREACHABLE & TTL_EXPIRED record status 
+
+Parameters:
+
+  PinpointApplicationId:
+    Description: The ID of your Pinpoint Application
+    Type: String
+    Default: 9ee8c2377b124e3db32a93fc01cd8fbd
+
+  EventStreamConfiguration:
+    Description: Choose the way in which your Event stream is configured for Pinpoint project.
+    Default: No existing event stream setup
+    Type: String
+    AllowedValues:
+      - No existing event stream setup
+      - Event stream setup with Amazon Kinesis Data Stream
+      - Event stream setup with Amazon Kinesis Firehose
+    ConstraintDescription: must specify from the drop-down.
+
+Conditions:
+
+  FirehoseEventStreamConfigured: !Equals 
+    - !Ref EventStreamConfiguration
+    - Event stream setup with Amazon Kinesis Firehose
+
+  KinesisEventStreamConfigured: !Equals 
+    - !Ref EventStreamConfiguration
+    - Event stream setup with Amazon Kinesis Data Stream
+
+  NoEventStreamConfigured: !Equals 
+    - !Ref EventStreamConfiguration
+    - No existing event stream setup
+
+Resources:
+
+  NestedStackNoEventStream:
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: NoEventStreamConfigured
+    Properties:
+      TemplateURL: >-
+        https://d2908q01vomqb2.cloudfront.net/artifacts/BusinessApplications/2022/08/sim-D30841386/NoEventStreamConfigured.yaml
+      Parameters:
+        PinpointApplicationId: !Ref PinpointApplicationId
+  
+  NestedStackKinesisEventStream:
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: KinesisEventStreamConfigured
+    Properties:
+      TemplateURL: >-
+        https://d2908q01vomqb2.cloudfront.net/artifacts/BusinessApplications/2022/08/sim-D30841386/KinesisEventStreamConfigured.yaml
+      Parameters:
+        PinpointApplicationId: !Ref PinpointApplicationId
+     
+  NestedStackFirehoseEventStream:
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: FirehoseEventStreamConfigured
+    Properties:
+      TemplateURL: >-
+        https://d2908q01vomqb2.cloudfront.net/artifacts/BusinessApplications/2022/08/sim-D30841386/FirehoseEventStreamConfigured.yaml
+      Parameters:
+        PinpointApplicationId: !Ref PinpointApplicationId
