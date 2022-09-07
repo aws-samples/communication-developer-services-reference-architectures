@@ -551,7 +551,7 @@ Organizations in many sectors and verticals have user bases to whom they send tr
 * Resend Important campaigns that are failed due to transient reasons. 
 
 ## Notes:
-* If existing Kinesis stream has pre-defined desination lambda then current strack will not replace it but exist gracefully
+* If existing Kinesis stream has pre-defined desination lambda then current strack will not replace it but exit gracefully.
 * If existing Kinesis firehose has pre-existing transfromation lambda then current stack shall not replace the current stack. 
 
 #### AWS CloudFormation Link
