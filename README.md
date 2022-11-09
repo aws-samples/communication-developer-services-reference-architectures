@@ -28,6 +28,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Send-Time Amazon Pinpoint Campaign Attributes](#Send-Time-Amazon-Pinpoint-Campaign-Attributes)
   * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
   * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
+  * [Amazon Pinpoint Email Attachments with Custom Channel](#amazon-pinpoint-email-attachments-with-custom-channel)
 * [Combining Multiple References Together](#Combining-Multiple-References-Together)   
   * [Triggered Imports, Phone Validate, Campaign Create](#Triggered-Imports-Phone-Validate-Campaign-Create)
 ------
@@ -733,6 +734,25 @@ This also assumes that an Amazon Connect Instance, Queue, and Contact Flow have 
 * [Automating outbound calling to customers using Amazon Connect](https://aws.amazon.com/blogs/contact-center/automating-outbound-calling-to-customers-using-amazon-connect/)
 * [Connect API - StartOutboundVoiceContact](https://docs.aws.amazon.com/connect/latest/APIReference/API_StartOutboundVoiceContact.html)
 * [IoT Channel Using Amazon Pinpoint](https://aws.amazon.com/solutions/iot-channel-using-amazon-pinpoint/)
+
+------
+
+### Amazon Pinpoint Email Attachments with Custom Channel
+
+#### Description
+
+Amazon Pinpoint currently doesn't support attachments when sending emails via Campaigns or Journeys. Customers have to use the Amazon SES SendRawMessage API operation to attach files, which lacks features such as customer segmentation and scheduling. This solution enables marketers to design and schedule Amazon Pinpoint journeys with attachments or pre-signed Amazon S3 URLs without the support of technical resources.
+
+#### Use-Cases
+
+* Monthly bills (specific to the recipient)
+* New terms & conditions (same for all)
+* Contracts (specific to the recipient)
+* Booking confirmation (specific to the recipient)
+* e-Tickets (specific to the recipient)
+
+#### GitHub repository
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/edit/master/Pinpoint_Custom_Channel_Attachment)
 
 ----
 
