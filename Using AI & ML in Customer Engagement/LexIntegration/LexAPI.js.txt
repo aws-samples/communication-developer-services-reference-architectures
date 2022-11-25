@@ -1,0 +1,66 @@
+const AWS = require('aws-sdk');
+AWS.config.update({
+    region: "us-east-1"
+});
+
+const lex = new AWS.LexRuntimeV2();
+
+const botId = process.env.BotId;
+const botAliasId = process.env.BotAlias;
+const localeId = "en_US";
+
+async function recognizeText(sessionId, text) {
+    console.log("RecognizeText API called");
+    
+    var recognizeTextParams = {
+        botId: botId,
+        botAliasId: botAliasId,
+        localeId: localeId,
+        sessionId: sessionId,
+        text: text
+    };
+    
+    console.log(recognizeTextParams);
+    
+    const data = await lex.recognizeText(recognizeTextParams).promise();
+    console.log("Response from Lex : ", JSON.stringify(data, null, 2));
+    return data;
+}
+
+async function createSession(sessionId, visitId) {
+    console.log("RecognizeText API called");
+    
+    var recognizeTextParams = {
+        botId: botId,
+        botAliasId: botAliasId,
+        localeId: localeId,
+        sessionId: sessionId,
+        sessionState:{"sessionAttributes":{"visitId":visitId}},
+        text: "Survey"
+    };
+    
+    const data = await lex.recognizeText(recognizeTextParams).promise();
+    console.log("Response from Lex : ", JSON.stringify(data, null, 2));
+    return data;
+}
+
+async function deleteSession(sessionId) {
+    console.log("RecognizeText API called");
+    
+    var recognizeTextParams = {
+        botId: botId,
+        botAliasId: botAliasId,
+        localeId: localeId,
+        sessionId: sessionId,
+    };
+    
+    const data = await lex.deleteSession(recognizeTextParams).promise();
+    console.log("Response from Lex : ", JSON.stringify(data, null, 2));
+    return data;
+}
+
+module.exports = {
+    recognizeText,
+    createSession,
+    deleteSession
+};
