@@ -1,0 +1,339 @@
+# Amazon Pinpoint Using AI & ML in Customer Engagement
+# author: vinayuj@
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Pinpoint 2-way SMS & recommendations"
+
+Parameters:
+  CodeS3Bucket:
+    Type: String
+    Default: pinpointreinventaiml-code
+    Description: Specify S3 bucket that contains Lambda code.
+  PinpointProjectId:
+    Type: String
+    Default: enter-pinpoint-projectid
+    Description: Specify the Pinpoint project ID that you created earlier.
+  BotAlias:
+    Type: String
+    Default: enter-BotAlias
+    Description: Specify the Bot Alias from Lex that you created earlier.
+  BotId:
+    Type: String
+    Default: enter-BotId
+    Description: Specify the BotID from Lex that you created earlier.
+  OriginationNumber:
+    Type: String
+    Default: +1214xxxxxx2
+    Description: Specify the origination phone number that you created earlier.
+
+
+Resources:
+    IAMPolicy:
+        Type: "AWS::IAM::Policy"
+        Properties:
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "Logs",
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogStream",
+                                "logs:CreateLogGroup",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": [
+                                "arn:aws:logs:*:*:*"
+                            ]
+                        },
+                        {
+                            "Sid": "Pinpoint",
+                            "Effect": "Allow",
+                            "Action": [
+                                "mobiletargeting:SendMessages"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Sid": "Lex",
+                            "Effect": "Allow",
+                            "Action": [
+                                "lex:PostContent",
+                                "lex:PostText"
+                            ],
+                            "Resource": [
+                                "arn:aws:lex:${AWS::Region}:${AWS::AccountId}:bot:*"
+                            ]
+                        }
+                    ]
+                }
+            Roles: 
+              - !Ref IAMRole2
+            PolicyName: "PinpointLexFunctionRole"
+
+    IAMPolicy2:
+        Type: "AWS::IAM::Policy"
+        Properties:
+            PolicyDocument: |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "VisualEditor0",
+                            "Effect": "Allow",
+                            "Action": [
+                                "dynamodb:DescribeImport",
+                                "dynamodb:DescribeContributorInsights",
+                                "dynamodb:ListTagsOfResource",
+                                "dynamodb:DescribeReservedCapacityOfferings",
+                                "dynamodb:PartiQLSelect",
+                                "dynamodb:DescribeTable",
+                                "dynamodb:GetItem",
+                                "dynamodb:DescribeContinuousBackups",
+                                "dynamodb:DescribeExport",
+                                "dynamodb:DescribeKinesisStreamingDestination",
+                                "dynamodb:DescribeLimits",
+                                "dynamodb:BatchGetItem",
+                                "dynamodb:ConditionCheckItem",
+                                "dynamodb:Scan",
+                                "dynamodb:Query",
+                                "dynamodb:DescribeStream",
+                                "dynamodb:DescribeTimeToLive",
+                                "dynamodb:ListStreams",
+                                "dynamodb:DescribeGlobalTableSettings",
+                                "dynamodb:GetShardIterator",
+                                "dynamodb:DescribeGlobalTable",
+                                "dynamodb:DescribeReservedCapacity",
+                                "dynamodb:DescribeBackup",
+                                "dynamodb:GetRecords",
+                                "dynamodb:DescribeTableReplicaAutoScaling"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                }
+            Roles: 
+              - !Ref IAMRole
+            PolicyName: "RE_Dynamo_Lex"
+
+    IAMPolicy3:
+        Type: "AWS::IAM::Policy"
+        Properties:
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "VisualEditor0",
+                            "Effect": "Allow",
+                            "Action": [
+                                "mobiletargeting:CreateEmailTemplate",
+                                "mobiletargeting:GetReports",
+                                "mobiletargeting:CreateVoiceTemplate",
+                                "mobiletargeting:CreateApp",
+                                "mobiletargeting:CreateRecommenderConfiguration",
+                                "mobiletargeting:CreateInAppTemplate",
+                                "mobiletargeting:CreateSmsTemplate",
+                                "mobiletargeting:GetRecommenderConfigurations",
+                                "mobiletargeting:CreatePushTemplate"
+                            ],
+                            "Resource": "*"
+                        },
+                        {
+                            "Sid": "VisualEditor1",
+                            "Effect": "Allow",
+                            "Action": "mobiletargeting:*",
+                            "Resource": "arn:aws:mobiletargeting:*:${AWS::AccountId}:apps/*"
+                        }
+                    ]
+                }
+            Roles: 
+              - !Ref IAMRole
+            PolicyName: "PinpointFullAccess"
+
+    IAMManagedPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            ManagedPolicyName: "AWSLambdaBasicExecutionRole-38a905e3-5ef9-4810-baf0-d52493083100"
+            Path: "/service-role/"
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "logs:CreateLogGroup",
+                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": [
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/RE_Order_Validation*"
+                            ]
+                        }
+                    ]
+                }
+
+    IAMManagedPolicy2:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            ManagedPolicyName: "AWSLambdaBasicExecutionRole-4f487b0d-a6ff-4d6d-b797-e85da86ec4d0"
+            Path: "/service-role/"
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "logs:CreateLogGroup",
+                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": [
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/LexIntegration*"
+                            ]
+                        }
+                    ]
+                }
+
+    IAMRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/service-role/"
+            RoleName: "RE_Order_Validation-role-19dg4id5"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Ref IAMManagedPolicy
+              - "arn:aws:iam::aws:policy/AWSLambda_FullAccess"
+
+    IAMRole2:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/service-role/"
+            RoleName: "LexIntegration-role-mh85nh60"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Ref IAMManagedPolicy2
+              - "arn:aws:iam::aws:policy/AmazonLexFullAccess"
+
+    DynamoDBTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            AttributeDefinitions: 
+              - 
+                AttributeName: "Order_Num"
+                AttributeType: "S"
+            TableName: "OrderStatus"
+            KeySchema: 
+              - 
+                AttributeName: "Order_Num"
+                KeyType: "HASH"
+            ProvisionedThroughput: 
+                ReadCapacityUnits: 1
+                WriteCapacityUnits: 1
+
+    ApplicationAutoScalingScalableTarget:
+        Type: "AWS::ApplicationAutoScaling::ScalableTarget"
+        Properties:
+            MaxCapacity: 10
+            MinCapacity: 1
+            ResourceId: !Sub "table/${DynamoDBTable}"
+            RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/dynamodb.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_DynamoDBTable"
+            ScalableDimension: "dynamodb:table:WriteCapacityUnits"
+            ServiceNamespace: "dynamodb"
+            SuspendedState: 
+                DynamicScalingInSuspended: false
+                DynamicScalingOutSuspended: false
+                ScheduledScalingSuspended: false
+
+    LambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - IAMRole2
+        Properties:
+            Description: ""
+            Environment: 
+                Variables: 
+                    PinpointApplicationId: !Ref PinpointProjectId
+                    BotAlias: !Ref BotAlias
+                    OriginationNumber: !Ref OriginationNumber
+                    BotId: !Ref BotId
+                    Region: !Ref AWS::Region
+            FunctionName: "LexIntegration"
+            Handler: "index.handler"
+            Architectures: 
+              - "x86_64"
+            Code:
+                S3Bucket:
+                    Ref: CodeS3Bucket
+                S3Key: "lambda/LexIntegration.zip"
+            MemorySize: 128
+            Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/service-role/LexIntegration-role-mh85nh60"
+            Runtime: "nodejs16.x"
+            Timeout: 30
+            TracingConfig: 
+                Mode: "PassThrough"
+            EphemeralStorage: 
+                Size: 512
+
+    LambdaFunction2:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - IAMRole
+        Properties:
+            Description: ""
+            Environment: 
+                Variables: 
+                    applicationId: !Ref PinpointProjectId
+            FunctionName: "RE_Order_Validation"
+            Handler: "lambda_function.lambda_handler"
+            Architectures: 
+              - "x86_64"
+            Code:
+                S3Bucket:
+                    Ref: CodeS3Bucket
+                S3Key: "lambda/RE_Order_Validation.zip"
+            MemorySize: 128
+            Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/service-role/RE_Order_Validation-role-19dg4id5"
+            Runtime: "python3.9"
+            Timeout: 3
+            TracingConfig: 
+                Mode: "PassThrough"
+            EphemeralStorage: 
+                Size: 512
+
+    SNSTopic:
+        Type: "AWS::SNS::Topic"
+        Properties:
+            DisplayName: ""
+            TopicName: "LexPinpointIntegrationDemo"
+
+    SNSTopicPolicy:
+        Type: "AWS::SNS::TopicPolicy"
+        Properties:
+            PolicyDocument: !Sub "{\"Version\":\"2012-10-17\",\"Id\":\"__default_policy_ID\",\"Statement\":[{\"Sid\":\"__default_statement_ID\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":[\"SNS:GetTopicAttributes\",\"SNS:SetTopicAttributes\",\"SNS:AddPermission\",\"SNS:RemovePermission\",\"SNS:DeleteTopic\",\"SNS:Subscribe\",\"SNS:ListSubscriptionsByTopic\",\"SNS:Publish\"],\"Resource\":\"${SNSTopic}\",\"Condition\":{\"StringEquals\":{\"AWS:SourceOwner\":\"${AWS::AccountId}\"}}},{\"Sid\":\"PinpointPublish\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"mobile.amazonaws.com\"},\"Action\":\"sns:Publish\",\"Resource\":\"${SNSTopic}\"}]}"
+            Topics: 
+              - !Ref SNSTopic
+
+    SNSSubscription:
+        Type: "AWS::SNS::Subscription"
+        Properties:
+            TopicArn: !Ref SNSTopic
+            Endpoint: !GetAtt LambdaFunction.Arn
+            Protocol: "lambda"
+            Region: !Ref AWS::Region
+
