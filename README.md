@@ -302,7 +302,7 @@ ORDER BY a.event_timestamp DESC
 * Machine Learning Training / Retraining
 
 #### AWS CloudFormation Link
-[CF Template](https://s3.amazonaws.com/solutions-reference/digital-user-engagement-events-database/v1.0.0/digital-user-engagement-events-database.template)
+[CF Template](https://github.com/awslabs/digital-user-engagement-events-database/blob/master/deployment/digital-user-engagement-events-database.template)
 
 #### Documentation References
 
