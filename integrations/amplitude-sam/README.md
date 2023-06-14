@@ -23,7 +23,8 @@ If you do not have a Pinpoint project, create one in the AWS console.  Instructi
 
 ## 2. Deploy this Integration
 
-* Clone the Github repo: git clone https://github.com/davelemons/amplitude-sam.git
+* Clone the Github repo: git clone [https://github.com/davelemons/amplitude-sam.git](https://github.com/aws-samples/communication-developer-services-reference-architectures.git)
+* Change into this directory: `cd communication-developer-services-reference-architectures/integrations/amplitude-sam`
 * Package the integration SAM package to an S3 bucket in your account:  `aws cloudformation package --template template.yml --s3-bucket [S3 Deployment Bucket] --output-template template-export.yml`  (Note that the package bucket should be created in the AWS region in which you plan to run your integration)
 * Deploy the integration via AWS CLI:  `aws --region [your region] cloudformation deploy --template-file template-export.yml --stack-name amplitude-sam --capabilities CAPABILITY_IAM --parameter-overrides PinpointProjectId=[Pinpoint Project/Application ID] FileDropS3Bucket=[S3 Bucket Name]`
 
