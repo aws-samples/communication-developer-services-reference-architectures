@@ -1,4 +1,4 @@
-# Amazon Pinpoint custom channel in journeys for email attachments
+# Amazon Pinpoint custom channel for email attachments
 
 Amazon Pinpoint currently doesn't support attachments when sending emails via Campaigns or Journeys. Customers have to use the Amazon SES SendRawMessage API operation to attach files, which lacks features such as customer segmentation and scheduling.
 
