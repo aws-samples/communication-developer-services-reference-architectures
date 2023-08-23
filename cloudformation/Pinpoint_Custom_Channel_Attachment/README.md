@@ -19,9 +19,9 @@ Marketers can specify the email template, friendly sender name, sender address, 
 
 The diagrams below outline the solution's features and possible scenarios:
 
-![attachment-scenarios](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Custom_Channel_Attachment/assets/attachment-scenarios.PNG)
+![attachment-scenarios](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/assets/attachment-scenarios.PNG)
 
-![architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Custom_Channel_Attachment/assets/architecture-nn.PNG)
+![architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/assets/architecture-nn.PNG)
 
 **Note:** Amazon Pinpoint custom channel processes endpoints in batches of 50 per AWS Lambda invokation.
 
@@ -130,16 +130,16 @@ Upload the file or files to the S3 bucket specified when you deployed the soluti
 
 ### Step 2
 Download the email HTML templates below and create them in Pinpoint:
-- [EmailAttachedFile.html](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Custom_Channel_Attachment/email_templates/EmailAttachedFile.html)
-- [EmailNoAttachment.html](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Custom_Channel_Attachment/email_templates/EmailNoAttachment.html)
-- [EmailS3URL.html](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Custom_Channel_Attachment/email_templates/EmailS3URL.html)
+- [EmailAttachedFile.html](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/email_templates/EmailAttachedFile.html)
+- [EmailNoAttachment.html](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/email_templates/EmailNoAttachment.html)
+- [EmailS3URL.html](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/email_templates/EmailS3URL.html)
 
 ### Step 3
 Create an Amazon Pinpoint journey and select **Custom channel** as the first activity. Choose the AWS Lambda function that got deployed as part of this solution.
 
 **Note:** you can follow the same approach and use campaign's **Custom Data** field to insert this infromation.
 
-![pinpoint-journey](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Custom_Channel_Attachment/assets/pinpoint-journey.png)
+![pinpoint-journey](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/assets/pinpoint-journey.png)
 
 Under the **Custom data** field enter the data based on the use case you want to test.
 
@@ -161,7 +161,7 @@ Publish the journey and check your inbox
 
 The cost displayed below is only for AWS Lambda and doesn't include the cost per email, Amazon S3 or the Amazon Pinpoint's monthly targeted audience cost. For the latest AWS Lambda cost please visit [AWS Lambda's pricing page](https://aws.amazon.com/lambda/pricing/). 
 
-![solution-cost](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Custom_Channel_Attachment/assets/custom-channel-cost-usd-nn.PNG)
+![solution-cost](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/assets/custom-channel-cost-usd-nn.PNG)
 
 ## Next steps
 
