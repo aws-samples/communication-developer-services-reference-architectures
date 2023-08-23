@@ -756,7 +756,7 @@ Amazon Pinpoint currently doesn't support attachments when sending emails via Ca
 [GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_Custom_Channel_Attachment)
 
 ----
-### Amazon Pinpoint Campaings, Journeys, Segments DB
+### Amazon Pinpoint Campaigns, Journeys, Segments DB
 
 #### Description
 
