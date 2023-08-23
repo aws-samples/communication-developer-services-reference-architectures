@@ -29,6 +29,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
   * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
   * [Amazon Pinpoint Email Attachments with Custom Channel](#amazon-pinpoint-email-attachments-with-custom-channel)
+  * [Amazon Pinpoint Campaings/Journeys/Segments DB](#amazon-pinpoint-campaignsjourneyssegments-db)
 * [Combining Multiple References Together](#Combining-Multiple-References-Together)   
   * [Triggered Imports, Phone Validate, Campaign Create](#Triggered-Imports-Phone-Validate-Campaign-Create)
 ------
@@ -753,6 +754,25 @@ Amazon Pinpoint currently doesn't support attachments when sending emails via Ca
 
 #### GitHub repository
 [GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_Custom_Channel_Attachment)
+
+----
+### Amazon Pinpoint Campaings/Journeys/Segments DB
+
+#### Description
+
+Amazon Pinpoint event streaming capability, utilizes Amazon Kinesis Firehose or Data Streams to stream the raw customer engagement events to an AWS service for further processing or storage. The data can be used to create custom dashboards using Amazon QuickSight or a 3rd party business intelligence tool. 
+
+The Amazon Pinpoint streamed events include the Campaign, Journey and Segment Ids but they don't include their names making it challenging for users to identify them when building a custom report. 
+
+This solution deploys a series of AWS services using AWS CloudFormation creating two Amazon DynamoDB tables, one stores the mapping between Campaign/Journey Ids and their names while the second one stores the mapping between Segment Ids and their names. To query the Amazon DynamoDB data with Amazon Athena, you can use this connector.
+
+#### Use-Cases
+
+* Custom dashboard development
+* Creation of user friendly dahsboards
+
+#### GitHub repository
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_Campaing_Journey_Segment_DB)
 
 ----
 
