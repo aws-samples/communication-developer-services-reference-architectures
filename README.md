@@ -455,14 +455,14 @@ This solution takes advantages of an Amazon SQS Standard Queue and Lambda trigge
 This solution is written in Python and uses a CloudFormation Template. It is fully configured for SES and requires minimum amendments for Pinpoint.
 
 #### Architecture Diagram
-![Screenshot](SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
+![Screenshot](cloudformation/SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
 
 #### Use case(s)
   * Queue SES / Pinpoint messages and handle any throttling errors
   * Store messages that are not being send due to an error in a dead letter queue for later processing or analysis
 
 #### GitHub repository with detailed ReadMe and AWS CloudFormation template
-[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/SES_Pinpoint_Messages_Queuing)
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/SES_Pinpoint_Messages_Queuing)
 
 ------
 
@@ -481,7 +481,7 @@ This solution utilizes AWS CloudFormation that invokes an AWS Lambda function up
   * Marketing teams that are working in different Pinpoint Projects can share existing Journeys between them
 
 #### GitHub repository with detailed ReadMe and AWS CloudFormation template
-[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/Pinpoint_Journey_Copy_Mechanism)
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_Journey_Copy_Mechanism)
 
 ------
 
@@ -752,7 +752,7 @@ Amazon Pinpoint currently doesn't support attachments when sending emails via Ca
 * e-Tickets (specific to the recipient)
 
 #### GitHub repository
-[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/edit/master/Pinpoint_Custom_Channel_Attachment)
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/edit/master/cloudformation/Pinpoint_Custom_Channel_Attachment)
 
 ----
 
