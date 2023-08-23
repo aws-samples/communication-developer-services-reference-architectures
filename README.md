@@ -29,7 +29,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
   * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
   * [Amazon Pinpoint Email Attachments with Custom Channel](#amazon-pinpoint-email-attachments-with-custom-channel)
-  * [Amazon Pinpoint Campaings/Journeys/Segments DB](#amazon-pinpoint-campaignsjourneyssegments-db)
+  * [Amazon Pinpoint Campaings/Journeys/Segments DB](#amazon-pinpoint-campaigns--journeys--segments-db)
 * [Combining Multiple References Together](#Combining-Multiple-References-Together)   
   * [Triggered Imports, Phone Validate, Campaign Create](#Triggered-Imports-Phone-Validate-Campaign-Create)
 ------
@@ -756,7 +756,7 @@ Amazon Pinpoint currently doesn't support attachments when sending emails via Ca
 [GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_Custom_Channel_Attachment)
 
 ----
-### Amazon Pinpoint Campaings/Journeys/Segments DB
+### Amazon Pinpoint Campaings / Journeys / Segments DB
 
 #### Description
 
