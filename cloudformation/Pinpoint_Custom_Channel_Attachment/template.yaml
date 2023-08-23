@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  pinpoint-custom-channel-attachments
+
+  SAM Template for Amazon Pinpoint attachments custom channel.
+
+Parameters:
+  PinpointAppId:
+    Type: String
+    Description: "The Amazon Pinpoint application or project id."
+    MaxLength: 50
+
+  AttachmentsBucketName:
+    Type: String
+    Description: "The S3 bucket where attachments will be stored."
+
+  S3URLExpiration:
+    Type: Number
+    Default: 3600
+    Description: "The S3 presigned URL expiration time in seconds."
+
+  FileType:
+    Type: String
+    Default: ".pdf"
+    Description: "The file type that will be used for the attachments starting with . e.g. .csv or .pdf."
+    
+Resources:
+
+  PinpointCustomAttachmentLambda:
+    Type: AWS::Serverless::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: Not public facing.
+    Properties:
+      ReservedConcurrentExecutions: 1
+      CodeUri: functions/custom-channel-attachments/
+      Handler: index.lambda_handler
+      Runtime: python3.9
+      Timeout: 150
+      MemorySize: 512
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          PINPOINT_APP_ID: !Ref PinpointAppId
+          BUCKET_NAME: !Ref AttachmentsBucketName
+          EXPIRATION: !Ref S3URLExpiration
+          FILE_TYPE: !Ref FileType
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - mobiletargeting:SendMessages
+                - mobiletargeting:GetEmailTemplate
+              Resource: !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:*"
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendRawEmail
+              Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:*"
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::${AttachmentsBucketName}/*"
+        - CloudWatchLogsFullAccess
+       
+Outputs:
+  AWSLambda:
+    Description: "Name of AWS Lambda function created."
+    Value: !Ref PinpointCustomAttachmentLambda
+        

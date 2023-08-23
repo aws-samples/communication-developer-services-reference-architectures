@@ -1,0 +1,226 @@
+# author: pavlosik@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: A solution that allows you to copy Amazon Pinpoint Journeys between Project and AWS Regions  
+
+Parameters:
+  AWSRegionFrom:
+    Type: String
+    Description: The AWS region that the existing Amazon Pinpoint project that the resources will be copied from
+    Default: 'us-east-1'
+    AllowedValues:
+      - 'us-east-1'
+      - 'us-west-2'
+      - 'ap-south-1'
+      - 'ap-northeast-2'
+      - 'ap-southeast-1'
+      - 'ap-southeast-2'
+      - 'ap-northeast-1'
+      - 'ca-central-1'
+      - 'eu-central-1'
+      - 'eu-west-1'
+      - 'eu-west-2'
+  PinpointProjectIdFrom:
+    Type: String
+    Description: The Pinpoint project from where the Journeys will be copied from
+  PinpointJourneyIds:
+    Type: String
+    Description: Type the Pinpoint Journey Ids separated by comma that you want to copy
+  PinpointProjectId:
+    Type: String
+    Description: The Pinpoint Project Id of an existing Pinpoint Project
+  NewPinpointProjectName:
+    Type: String
+    Description: The name of the new Pinpoint Project Id if you don't have one, otherwise leave empty
+  DeleteAll:
+    Type: String
+    Description: If Yes is selected then all Pinpoint Journeys will be deleted. Note that if you create a Pinpoint Project as part of this CloudFormation template, it won't be deleted. 
+    Default: 'No'
+    AllowedValues:
+      - 'Yes'
+      - 'No'    
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Parameters about existing Pinpoint Project"  
+        Parameters:
+          - AWSRegionFrom
+          - PinpointProjectIdFrom
+          - PinpointJourneyIds
+      -
+        Label:
+          default: "Parameters about new Pinpoint Project"
+        Parameters:
+          - PinpointProjectId
+          - NewPinpointProjectName
+          - DeleteAll
+
+Conditions:
+  NeedsPinpointProjectId: !Equals ['', !Ref PinpointProjectId]
+
+Resources:
+  PinpointProject:
+    Type: AWS::Pinpoint::App
+    Condition: NeedsPinpointProjectId
+    DeletionPolicy: Retain
+    Properties: 
+      Name: !Ref NewPinpointProjectName
+
+  CreateJourneyLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: Not public facing.
+    Properties:
+      Runtime: python3.9
+      Timeout: 120
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaIAMRole.Arn
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          DELETE_ALL: !Ref DeleteAll
+          NEW_EXISTING_PID: !Ref PinpointProjectId
+          AWS_REGION_FROM: !Ref AWSRegionFrom
+          APPLICATION_ID_FROM: !Ref PinpointProjectIdFrom
+          JOURNEY_IDS: !Ref PinpointJourneyIds
+          APPLICATION_ID: !If
+            - NeedsPinpointProjectId
+            - !Ref PinpointProject
+            - !Ref PinpointProjectId
+      Code:
+        ZipFile: |
+          from __future__ import print_function
+          import json
+          import boto3
+          import os
+          import cfnresponse
+          from datetime import datetime
+          SUCCESS = "SUCCESS"
+          FAILED = "FAILED"
+
+          print('Loading function')
+          delete_all = os.environ['DELETE_ALL']
+          new_existing_pid = os.environ['NEW_EXISTING_PID']
+          application_id = os.environ['APPLICATION_ID']
+          aws_region = os.environ['AWS_REGION_FROM']
+          application_id_from = os.environ['APPLICATION_ID_FROM']
+          journey_ids = ((str(os.environ['JOURNEY_IDS'])).replace(' ','')).split(',')
+          s3 = boto3.resource('s3')
+          pinpoint = boto3.client('pinpoint')
+          pinpoint_from = boto3.client('pinpoint', region_name = aws_region)
+          cf = boto3.client('cloudformation')            
+
+          def lambda_handler(event, context):
+            print(event)
+            print("Received event: " + json.dumps(event, indent=2))
+            responseData={}
+            try:
+              if event['RequestType'] == 'Delete':
+                  print("Request Type:",event['RequestType'])
+                  if delete_all == 'Yes':
+                    get_cf = cf.describe_stacks(StackName = event['StackId'])
+                    journey_id_list = get_cf['Stacks'][0]['Outputs'][0]['OutputValue']
+                    journey_id_list = ((((str(journey_id_list).replace(' ','')).replace('[','')).replace(']','')).replace("'",'')).split(',')
+                    for ji in journey_id_list:
+                      delete_journey(ji)
+                    print("Sending response to custom resource after Delete")
+              elif event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                  print("Request Type:",event['RequestType'])
+                  journey_ids_list = []
+                  for ji in journey_ids:
+                    journey_id = add_journey(ji)
+                    journey_ids_list.append(journey_id)
+                  responseData={'JourneyId': str(journey_ids_list)}
+                  print("Sending response to custom resource")
+              responseStatus = 'SUCCESS'                
+            except Exception as e:
+                print('Failed to process:', e)
+                responseStatus = 'FAILED'
+                responseData = {'Failure': 'Something bad happened.'}
+            cfnresponse.send(event, context, responseStatus, responseData)
+
+          def add_journey(ji):
+            # Create an Amazon Pinpoint Journey via API
+            try:
+              response = pinpoint_from.get_journey(
+                  ApplicationId = application_id_from,
+                  JourneyId = ji
+              )
+              del response['JourneyResponse']['ApplicationId']
+              del response['JourneyResponse']['Id']
+              del response['JourneyResponse']['Schedule']
+              response['JourneyResponse'].update(State = 'DRAFT')
+              #response['JourneyResponse']['Schedule'].update(StartTime = datetime.now())
+              response = pinpoint.create_journey(
+                  ApplicationId= application_id,
+                  WriteJourneyRequest= response['JourneyResponse']
+              )
+              journey_id = response['JourneyResponse']['Id']
+              print("Created Pinpoint Journey: " + journey_id)
+              
+            except Exception as e:
+              journey_id = 'NA'
+              print(e)
+            
+            return(journey_id)
+
+          def delete_journey(journey_id):
+            response = pinpoint.delete_journey(
+              ApplicationId = application_id,
+              JourneyId = journey_id
+            )
+            print("Deleting Pinpoint Journey: " + journey_id)
+            print("Delete request completed....")
+
+  LambdaIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "cloudformation:DescribeStacks"
+                Resource: 
+                  - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*/*"
+              - Effect: Allow
+                Action:
+                  - "mobiletargeting:GetJourney"
+                  - "mobiletargeting:CreateJourney"
+                  - "mobiletargeting:DeleteJourney"
+                Resource: 
+                  - !Sub "arn:aws:mobiletargeting:*:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+
+  LambdaTrigger:
+    Type: 'Custom::LambdaTrigger'
+    Properties:
+      ServiceToken: !GetAtt CreateJourneyLambdaFunction.Arn
+
+Outputs:
+  JourneyId: 
+    Value: !GetAtt LambdaTrigger.JourneyId
+    Description: The Journey Id created

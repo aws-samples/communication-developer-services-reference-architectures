@@ -1,0 +1,572 @@
+# Amazon Pinpoint Campaigns/Journeys/Segments DB
+#
+# **DO NOT DELETE**
+#
+# author: pavlosik@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploys two Amazon DynamoDB tables that store the Amazon Pinpoint Campaign, Journey and Segment data.
+
+Parameters:
+
+  PinpointProjectId:
+    Type: String
+    Description: The Amazon Pinpoint Project ID.
+
+Resources:
+
+  ## AWS Lambda invoked from S3 notification
+  PinpointCloudTrailProcessorLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt PinpointCloudTrailProcessorRole.Arn
+      Runtime: python3.10
+      Timeout: 120
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          DYNAMODB_TABLENAME: !Select [1, !Split ['/', !GetAtt PinpointCampJourDB.Arn]]
+          SEGMENT_DYNAMODB_TABLENAME: !Select [1, !Split ['/', !GetAtt PinpointSegmentDB.Arn]]
+          APPLICATION_ID: !Ref PinpointProjectId
+      Code:
+        ZipFile: |
+            import io
+            import os
+            import gzip
+            import json
+            import boto3
+            from urllib.parse import unquote_plus
+            from boto3.dynamodb.conditions import Key, Attr
+            from botocore.exceptions import ClientError
+
+            s3client = boto3.client('s3')
+            pinpoint = boto3.client('pinpoint')
+            dynamodb = boto3.resource('dynamodb')
+            dynamodb_segment = boto3.resource('dynamodb')
+
+            segment_dynamodb_tablename = os.environ['SEGMENT_DYNAMODB_TABLENAME']
+            dynamodb_tablename = os.environ['DYNAMODB_TABLENAME']
+            application_id = os.environ['APPLICATION_ID']
+            table = dynamodb.Table(dynamodb_tablename)
+            table_segment = dynamodb_segment.Table(segment_dynamodb_tablename)
+
+            def lambda_handler(event, context):
+                print(event)
+                dont_delete = []
+
+                for record in event['Records']:
+                    bucket = record['s3']['bucket']['name']
+                    key = unquote_plus(record['s3']['object']['key'])
+
+                    response = s3client.get_object(Bucket=bucket, Key=key)
+                    content = response['Body'].read()
+                    with gzip.GzipFile(fileobj=io.BytesIO(content), mode='rb') as fh:
+                        jrecords = json.load(fh)
+
+                    for jrecord in jrecords['Records']:
+                        event_name = jrecord['eventName']
+                        if event_name == 'CreateCampaign':
+                            id_to_create = jrecord['responseElements']['Id']
+                            try:
+                                response = pinpoint.get_campaign(ApplicationId=application_id,CampaignId=id_to_create)
+                            except ClientError as e:
+                                print(e)
+                                if "Resource not found" in str(e):
+                                    dont_delete.append(id_to_create)
+                            else:
+                                campaign_name = response['CampaignResponse']['Name']
+                                segment_id = response['CampaignResponse']['SegmentId']
+                                if "EventFilter" in response['CampaignResponse']['Schedule']:
+                                    event_name = response['CampaignResponse']['Schedule']['EventFilter']['Dimensions']['EventType']['Values'][0]
+                                else:
+                                    event_name = "null"
+                                create_dynamodb_item(id_to_create, campaign_name, 'campaign', segment_id, event_name)
+                                print("Campaign created with id: " + id_to_create)
+                        elif ((event_name in ['CreateJourney','UpdateJourney']) and (jrecord['responseElements']['State'] != "DRAFT")):
+                            id_to_create = jrecord['responseElements']['Id']
+                            try:
+                                journey_name = pinpoint.get_journey(ApplicationId=application_id,JourneyId=id_to_create)
+                                start_condition = jrecord['responseElements']['StartCondition']
+                                if "EventStartCondition" in start_condition:
+                                    event_name = start_condition['EventStartCondition']['EventFilter']['Dimensions']['EventType']['Values'][0]
+                                    if "SegmentId" in start_condition['EventStartCondition']:
+                                        segment_id = start_condition['EventStartCondition']['SegmentId']
+                                    else:
+                                        segment_id = "null"                                
+                                elif "SegmentStartCondition" in start_condition:
+                                    segment_id = start_condition['SegmentStartCondition']['SegmentId']
+                                    event_name = "null"
+                            except ClientError as e:
+                                print(e)
+                            else:
+                                journey_name = journey_name['JourneyResponse']['Name']
+                                create_dynamodb_item(id_to_create, journey_name, 'journey', segment_id, event_name)
+                                print("Journey created with id: " + id_to_create)
+                        elif event_name in ['UpdateSegment', 'CreateSegment', 'DeleteSegment']:
+                            segment_id = jrecord['responseElements']['Id']
+                            if event_name == 'DeleteSegment':
+                                try:
+                                    response = table_segment.update_item(
+                                      Key={
+                                          'id': segment_id
+                                      },
+                                      UpdateExpression='set deleted=:r',
+                                      ExpressionAttributeValues={
+                                          ':r': 'true'
+                                      },
+                                      ReturnValues="UPDATED_NEW"
+                                    )
+                                except ClientError as e:
+                                    print(e)
+                            else:
+                                try:
+                                    segment_name = (pinpoint.get_segment(ApplicationId = application_id, SegmentId = segment_id))['SegmentResponse']['Name']
+                                    response = table_segment.put_item(
+                                        Item={
+                                            'id': segment_id,
+                                            'name': segment_name,
+                                            'deleted': 'false'
+                                        }
+                                    )
+                                    print("Segment created with id: " + segment_id)
+                                except ClientError as e:
+                                    print(e)
+                        elif event_name in ['DeleteCampaign', 'DeleteJourney']:
+                            id_to_update = jrecord['responseElements']['Id']
+                            # Checks if Campaign/Journey has been already deleted. If it has then it won't update.
+                            if id_to_update not in dont_delete:
+                                response = table.update_item(
+                                  Key={
+                                      'id': id_to_update
+                                  },
+                                  UpdateExpression='set deleted=:r',
+                                  ExpressionAttributeValues={
+                                      ':r': 'true'
+                                  },
+                                  ReturnValues="UPDATED_NEW"
+                                )
+                                print("Campaign/Journey deleted with id: " + id_to_update)
+                            else:
+                                print(event_name[6:] + " probably created and deleted in the same CloudTrail log file.")
+              
+            def create_dynamodb_item(id_to_create, name, camp_journey, segment_id, event_name):
+                response = table.put_item(
+                    Item={
+                        'id': id_to_create,
+                        'name': name,
+                        'type': camp_journey,
+                        'deleted': 'false',
+                        'segment_id': segment_id,
+                        'event_name': event_name
+                    }
+                )
+                return response
+
+
+  PinpointCloudTrailProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "mobiletargeting:GetCampaign"
+                  - "mobiletargeting:GetJourney"
+                  - "mobiletargeting:GetSegment"
+                Resource:
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}*"
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}"
+              -
+                Effect: "Allow"
+                Action:
+                  - "dynamodb:PutItem"
+                  - "dynamodb:UpdateItem"               
+                Resource:
+                  - !GetAtt PinpointCampJourDB.Arn
+                  - !GetAtt PinpointSegmentDB.Arn
+              -
+                Effect: "Allow"
+                Action:
+                  - "s3:GetObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${CloudTrailPinpointS3}/*"
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt PinpointCloudTrailProcessorLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::${CloudTrailPinpointS3}'
+
+  # Dynamo DB table
+  PinpointCampJourDB:
+    Type: AWS::DynamoDB::Table
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties: 
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: 
+      - AttributeName: id
+        AttributeType: S
+      KeySchema: 
+      - AttributeName: id
+        KeyType: HASH
+      PointInTimeRecoverySpecification:  
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        
+  PinpointSegmentDB:
+    Type: AWS::DynamoDB::Table
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties: 
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: 
+      - AttributeName: id
+        AttributeType: S
+      KeySchema: 
+      - AttributeName: id
+        KeyType: HASH
+      PointInTimeRecoverySpecification:  
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        
+  # Create the Amazon S3 bucket for CloudTrail logs with Lambda Trigger
+  CloudTrailPinpointS3:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: Not public facing.
+    Properties:
+      OwnershipControls:
+        Rules:
+         - ObjectOwnership: BucketOwnerPreferred
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpirationRule
+            ExpirationInDays: 1
+            Status: Enabled
+            
+  S3bucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CloudTrailPinpointS3
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: AWSCloudTrailAclCheck
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:GetBucketAcl"
+          Resource: !Sub arn:aws:s3:::${CloudTrailPinpointS3}
+        - Sid: AWSCloudTrailWrite
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:PutObject"
+          Resource: !Sub arn:aws:s3:::${CloudTrailPinpointS3}/AWSLogs/${AWS::AccountId}/*
+          Condition:
+            StringEquals:
+              "s3:x-amz-acl": "bucket-owner-full-control"
+              
+  # CloudTrail
+  PinpointEventsCloudTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties: 
+      IsLogging: True
+      S3BucketName: !Ref CloudTrailPinpointS3
+      EnableLogFileValidation: true
+      EventSelectors:
+       - IncludeManagementEvents: true
+         ReadWriteType: WriteOnly
+         
+  ## Custom Lambda Resource to add a Lambda Trigger to the CloudTrail S3 bucket
+  # See: https://aws.amazon.com/premiumsupport/knowledge-center/cloudformation-s3-notification-lambda/
+  CustomResourceLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt CustomResourceLambdaFunctionRole.Arn
+      Runtime: python3.10
+      Timeout: 180
+      MemorySize: 256
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          DYNAMODB_TABLENAME: !Select [1, !Split ['/', !GetAtt PinpointCampJourDB.Arn]]
+          SEGMENT_DYNAMODB_TABLENAME: !Select [1, !Split ['/', !GetAtt PinpointSegmentDB.Arn]]
+      Code:
+        ZipFile: |
+            from __future__ import print_function
+            import json
+            import os
+            import boto3
+            import cfnresponse
+            from boto3.dynamodb.conditions import Key, Attr
+
+            SUCCESS = "SUCCESS"
+            FAILED = "FAILED"
+
+            print('Loading function')
+            s3 = boto3.resource('s3')
+            dynamodb = boto3.resource('dynamodb')
+            dynamodb_segment = boto3.resource('dynamodb')
+            pinpoint = boto3.client('pinpoint')
+            dynamodb_tablename = os.environ['DYNAMODB_TABLENAME']
+            table = dynamodb.Table(dynamodb_tablename)
+            segment_dynamodb_tablename = os.environ['SEGMENT_DYNAMODB_TABLENAME']
+            table_segment = dynamodb_segment.Table(segment_dynamodb_tablename)
+
+            def lambda_handler(event, context):
+                print("Received event: " + json.dumps(event, indent=2)) 
+                responseData={}
+                try:
+                    if event['RequestType'] == 'Delete':
+                        print("Request Type:",event['RequestType'])
+                        Bucket=event['ResourceProperties']['Bucket']
+                        delete_notification(Bucket)
+                        print("Sending response to custom resource after Delete")
+                    elif event['RequestType'] == 'Create':
+                        print("Request Type:",event['RequestType'])
+                        # Creating Amazon S3 notification
+                        LambdaArn=event['ResourceProperties']['LambdaArn']
+                        Bucket=event['ResourceProperties']['Bucket']
+                        Prefix=event['ResourceProperties']['Prefix']
+                        add_notification(LambdaArn, Bucket, Prefix)
+                        # Getting and creating Amazon Pinpoint campaings & journeys
+                        application_id=event['ResourceProperties']['Application_id']
+                        create_camp_jour(application_id)
+                        responseData={'Bucket':Bucket}
+                        print("Sending response to custom resource")
+                    responseStatus = 'SUCCESS'
+                except Exception as e:
+                    print('Failed to process:', e)
+                    responseStatus = 'FAILED'
+                    responseData = {'Failure': 'Something bad happened.'}
+                cfnresponse.send(event, context, responseStatus, responseData)
+
+            def add_notification(LambdaArn, Bucket, Prefix):
+                bucket_notification = s3.BucketNotification(Bucket)
+                response = bucket_notification.put(
+                  NotificationConfiguration={
+                    'LambdaFunctionConfigurations': [
+                      {
+                          'LambdaFunctionArn': LambdaArn,
+                          'Events': [
+                              's3:ObjectCreated:*'
+                          ],
+                          'Filter': {
+                              'Key': {
+                                  'FilterRules': [{
+                                      'Name': 'prefix',
+                                      'Value': Prefix
+                                  }]
+                              }
+                          }
+                      }
+                    ]
+                  }
+                )
+                print("Put request completed....")
+
+            def delete_notification(Bucket):
+                bucket_notification = s3.BucketNotification(Bucket)
+                response = bucket_notification.put(
+                    NotificationConfiguration={}
+                )
+                print("Delete request completed....")
+
+            def create_camp_jour(application_id):
+                # Get Pinpoint Campaings
+                response = pinpoint.get_campaigns( ApplicationId = application_id, PageSize = '15')  
+                campaigns = response['CampaignsResponse']['Item']
+                if len(campaigns) > 0:
+                    while 'NextToken' in response['CampaignsResponse']:
+                        response = pinpoint.get_campaigns( ApplicationId = application_id, PageSize = '15', Token = response['NextToken'])
+                        campaigns.update(response['CampaignsResponse']['Item'])
+                    for campaign in campaigns:
+                        name = campaign['Name']
+                        id_to_create = campaign['Id']
+                        seg_id = campaign['SegmentId']
+                        if "EventFilter" in campaign['Schedule']:
+                            event_name = campaign['Schedule']['EventFilter']['Dimensions']['EventType']['Values'][0]
+                        else:
+                            event_name = "null"
+                        add_to_db(id_to_create, name, 'campaign', seg_id, event_name)
+                else:
+                    print("No campaigns found")               
+                # Get Pinpoint Journeys
+                response = pinpoint.list_journeys(ApplicationId = application_id, PageSize = '15')
+                journeys = response['JourneysResponse']['Item']
+                if len(journeys) > 0:
+                    while 'NextToken' in response['JourneysResponse']:
+                        response = pinpoint.list_journeys( ApplicationId = application_id, PageSize = '15', Token = response['NextToken'])
+                        journeys.update(response['JourneysResponse']['Item'])
+                    for journey in journeys:
+                        name = journey['Name']
+                        id_to_create = journey['Id']
+                        if journey['State'] != "DRAFT":
+                            start_condition = journey['StartCondition']
+                            if "EventStartCondition" in start_condition:
+                                event_name = start_condition['EventStartCondition']['EventFilter']['Dimensions']['EventType']['Values'][0]
+                                if "SegmentId" in start_condition['EventStartCondition']:
+                                    seg_id = start_condition['EventStartCondition']['SegmentId']
+                                else:
+                                    seg_id = "null"                                
+                            elif "SegmentStartCondition" in start_condition:
+                                seg_id = start_condition['SegmentStartCondition']['SegmentId']
+                                event_name = "null"
+                            add_to_db(id_to_create, name, 'journey', seg_id, event_name)
+                        else:
+                            print("Journey: " + id_to_create + " is in State DRAFT and won't be created.")
+                else:
+                    print("No journeys found")                    
+                # Get Pinpoint Segments
+                response = pinpoint.get_segments(ApplicationId = application_id, PageSize = '15')
+                segments = response['SegmentsResponse']['Item']
+                if len(segments) > 0:
+                    while 'NextToken' in response:
+                        response = pinpoint.get_segments( ApplicationId = application_id, PageSize = '15', Token = response['NextToken'])
+                        segments.update(response['SegmentsResponse']['Item'])
+                    for segment in segments:
+                        name = segment['Name']
+                        id_to_create = segment['Id']
+                        seg_id = campaign['SegmentId']
+                        add_seg_to_db(id_to_create, name)
+                else:
+                    print("No segments found")
+                    
+            # Create Campaigns / Journey DynamoDB items
+            def add_to_db(id_to_create, name, camp_journey, seg_id, event_name):
+                response = table.put_item(
+                    Item={
+                        'id': id_to_create,
+                        'name': name,
+                        'type': camp_journey,
+                        'segment_id': seg_id,
+                        'deleted': 'false',
+                        'event_name' : event_name
+                    }
+                )
+                print("Created " + camp_journey + " with ID: " + id_to_create)
+
+            # Create Segment DynamoDB items
+            def add_seg_to_db(id_to_create, name):
+                response = table_segment.put_item(
+                    Item={
+                        'id': id_to_create,
+                        'name': name,
+                        'deleted': 'false'
+                    }
+                )
+                print("Created segment with ID: " + id_to_create)            
+                       
+  
+  CustomResourceLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "mobiletargeting:GetCampaigns"
+                  - "mobiletargeting:ListJourneys"
+                  - "mobiletargeting:GetSegments"
+                Resource:
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}*"
+                  - !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointProjectId}"
+              -
+                Effect: "Allow"
+                Action:
+                  - "dynamodb:PutItem"              
+                Resource:
+                  - !GetAtt PinpointCampJourDB.Arn
+                  - !GetAtt PinpointSegmentDB.Arn
+              -
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutDestination
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              -
+                Effect: Allow
+                Action:
+                  - s3:GetBucketNotification
+                  - s3:PutBucketNotification
+                Resource:
+                  - !Sub "arn:aws:s3:::${CloudTrailPinpointS3}"
+                  - !Sub "arn:aws:s3:::${CloudTrailPinpointS3}/*"
+
+  CustomLambdaTrigger:
+    Type: 'Custom::LambdaTrigger'
+    DependsOn: PinpointCampJourDB
+    Properties:
+      ServiceToken: !GetAtt CustomResourceLambdaFunction.Arn
+      LambdaArn: !GetAtt PinpointCloudTrailProcessorLambda.Arn
+      Bucket: !Ref CloudTrailPinpointS3
+      Prefix: !Sub "AWSLogs/${AWS::AccountId}/CloudTrail/${AWS::Region}/"
+      Application_id: !Ref PinpointProjectId
+
+Outputs:
+  campaignJourneyDynamoDbTableName:
+    Description: The name of the dynamo DB table where pinpoint campaign/journey data is stored
+    Value: !Select [1, !Split ["/", !GetAtt PinpointCampJourDB.Arn]]
+  segmentDynamoDbTableName:
+    Description: The name of the dynamo DB table where pinpoint data segment data is stored
+    Value: !Select [1, !Split ["/", !GetAtt PinpointSegmentDB.Arn]]
