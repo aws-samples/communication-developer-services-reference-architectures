@@ -26,7 +26,7 @@ The solution presented in this repository, utilizes AWS CloudFormation that exec
 ## Implementation
 
 1. Navigate to the AWS CloudFormation console under the AWS Region that you want to paste the copied Journeys.
-2. Create a Stack from **New Resources** and select the [AWS CloudFormation template](SampleCode/JourneyCopyMechanism/cloudformation/PinpointJourneyCopingMechanismCF.yaml) from this repository.
+2. Create a Stack from **New Resources** and select the [AWS CloudFormation template](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Journey_Copy_Mechanism/PinpointJourneyCopingMechanismCF.yaml) from this repository.
 3. Fill the template parameters as shown below:
     1. **Stack name**: Provide a name for your AWS CloudFormation stack.
     2. **AWSRegionFrom**: Select from the list the AWS Region where you want to copy the existing Pinpoint journeys from.
