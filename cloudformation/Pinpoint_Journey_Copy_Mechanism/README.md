@@ -8,7 +8,7 @@ To achieve the above Amazon Pinpoint users need to re-create these assets in the
 
 ## Solution
 
-![solution_process](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Journey_Copy_Mechanism/PinpointJourneyCopyProcess.png)
+![solution_process](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Journey_Copy_Mechanism/PinpointJourneyCopyProcess.png)
 
 The solution presented in this repository, utilizes AWS CloudFormation that executes an AWS Lambda function upon deployment and copies the specified Journeys from one Amazon Pinpoint Project to another. The solution can also copy journeys between AWS regions and have them created either in an existing Amazon Pinpoint Project or a new one.
 
