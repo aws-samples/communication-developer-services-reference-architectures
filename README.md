@@ -29,7 +29,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [External Amazon Pinpoint Campaign Templates](#External-Amazon-Pinpoint-Campaign-Templates)
   * [Connect (or Facebook, WhatsApp, Twitter, anything) as a Pinpoint Campaign Channel](#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel)
   * [Amazon Pinpoint Email Attachments with Custom Channel](#amazon-pinpoint-email-attachments-with-custom-channel)
-  * [Amazon Pinpoint Campaings/Journeys/Segments DB](#amazon-pinpoint-campaigns-journeys-segments-db)
+  * [Amazon Pinpoint Campaings, Journeys, Segments DB](#amazon-pinpoint-campaigns-journeys-segments-db)
 * [Combining Multiple References Together](#Combining-Multiple-References-Together)   
   * [Triggered Imports, Phone Validate, Campaign Create](#Triggered-Imports-Phone-Validate-Campaign-Create)
 ------
@@ -765,6 +765,9 @@ Amazon Pinpoint event streaming capability, utilizes Amazon Kinesis Firehose or 
 The Amazon Pinpoint streamed events include the Campaign, Journey and Segment Ids but they don't include their names making it challenging for users to identify them when building a custom report. 
 
 This solution deploys a series of AWS services using AWS CloudFormation creating two Amazon DynamoDB tables, one stores the mapping between Campaign/Journey Ids and their names while the second one stores the mapping between Segment Ids and their names. To query the Amazon DynamoDB data with Amazon Athena, you can use this connector.
+
+#### Architecture diagram
+![architecture-diagram](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Campaing_Journey_Segment_DB/Assets/Architecture-Diagram.PNG)
 
 #### Use-Cases
 
