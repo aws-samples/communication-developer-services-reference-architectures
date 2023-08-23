@@ -6,7 +6,7 @@ Amazon SES and Amazon Pinpoint API operations for sending messages, don't have a
 
 ## Architecture
 
-![architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
+![architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
 
 The solution, utilizes Amazon SQS for queuing, Amazon Lambda for consuming the SQS messages and Amazon CloudWatch for monitoring.
 
@@ -26,13 +26,13 @@ To reach e.g. 20 emails per second throughput, you would need more than one AWS 
 
 In case the SES or Pinpoint API returns a throttling error, the **poller** AWS Lambda function will write that message back to the SQS Standard Queue. If any other error is returned, the message will be placed to a Dead Letter Queue (DLQ), which is deployed as part of this solution.
 
-![queuing-diagram](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/SES_Pinpoint_Messages_Queuing/images/queuing-logic.PNG)
+![queuing-diagram](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/images/queuing-logic.PNG)
 
 ## CloudWatch-Dashboard
 
 Monitoring is important and helpful for configuring properly the SQS batch and AWS Lambda concurrency so that you can achieve the maximum throughput.
 
-![cloudwatch-dashboard](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/SES_Pinpoint_Messages_Queuing/images/CloudWatch-Dashboard-Metrics.PNG)
+![cloudwatch-dashboard](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/images/CloudWatch-Dashboard-Metrics.PNG)
 
 This solution deploys an Amazon CloudWatch dashboard from where you can monitor:
 - Number of messages written to the SQS
@@ -53,8 +53,8 @@ This solution deploys an Amazon CloudWatch dashboard from where you can monitor:
 - The AWS Lambda function **sqs_message_poller > lambda_function** contains a **sleep** function in case your SES / Pinpoint account is in Sandbox and the sending throughput is 1. To avoid receiving constant throttling erros, the **sleep** function keeps the AWS Lambda function running up to 1 second e.g. 1 SES / Pinpoint send_message API call is 100 ms so the **sleep** function is 800 - 900 ms.To use the sleep funtion you will need to un-comment it.
 
 **IMPLEMENTATION:**
-- Create an S3 bucket and upload the two zip files in the folder [aws-lambda-code](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/SES_Pinpoint_Messages_Queuing/aws-lambda-code)
-- Navigate to the AWS CloudFormation console and deploy the stack using existing resources [YAML template attached](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/SES_Pinpoint_Messages_Queuing/SES_Pinpoint_Messages_Queuing.yaml)
+- Create an S3 bucket and upload the two zip files in the folder [aws-lambda-code](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/SES_Pinpoint_Messages_Queuing/aws-lambda-code)
+- Navigate to the AWS CloudFormation console and deploy the stack using existing resources [YAML template attached](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/SES_Pinpoint_Messages_Queuing.yaml)
 - Fill the fields as per the instructions below:
   - Sub **DashboardName:** Provide a name for the CloudWatch dashboard that will be created
   - Sub **EmailFrom:** The email address that you will use to send emails for testing purposes. This email address will be used from the solution to start sending messages, thus it needs to be [verified first](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html)
