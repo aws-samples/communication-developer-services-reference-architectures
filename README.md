@@ -455,14 +455,14 @@ This solution takes advantages of an Amazon SQS Standard Queue and Lambda trigge
 This solution is written in Python and uses a CloudFormation Template. It is fully configured for SES and requires minimum amendments for Pinpoint.
 
 #### Architecture Diagram
-![Screenshot](cloudformation/SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
+![Screenshot](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
 
 #### Use case(s)
   * Queue SES / Pinpoint messages and handle any throttling errors
   * Store messages that are not being send due to an error in a dead letter queue for later processing or analysis
 
 #### GitHub repository with detailed ReadMe and AWS CloudFormation template
-[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/SES_Pinpoint_Messages_Queuing)
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/SES_Pinpoint_Messages_Queuing.yaml)
 
 ------
 
@@ -752,7 +752,7 @@ Amazon Pinpoint currently doesn't support attachments when sending emails via Ca
 * e-Tickets (specific to the recipient)
 
 #### GitHub repository
-[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/edit/master/cloudformation/Pinpoint_Custom_Channel_Attachment)
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_Custom_Channel_Attachment)
 
 ----
 
@@ -763,7 +763,7 @@ Amazon Pinpoint currently doesn't support attachments when sending emails via Ca
 Chaining the [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports), [Automatic Phone Number Validate](#Automatic-Phone-Number-Validate), and [Automatic Amazon Pinpoint Campaign Creation](#Automatic-Amazon-Pinpoint-Campaign-Creation) reference architectures together can create a import pipeline to automatically import files as they land in S3, perform phone number validation on all new numbers, then kick off a campaign automatically.
 
 #### AWS CloudFormation Link
-[CF Template](cloudformation/Combining_import_validate_campaign.yaml)
+[CF Template](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Custom_Channel_Attachment/template.yaml)
 
 ***
 
