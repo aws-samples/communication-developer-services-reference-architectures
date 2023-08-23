@@ -1,5 +1,5 @@
 # Amazon Pinpoint Campaings/Journeys/Segments DB
-Amazon Pinpoint [event streaming capability](https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams.html), utilizes [Amazon Kinesis Firehose or Data Streams](https://aws.amazon.com/kinesis/) to stream the raw customer engagement events to an AWS service for further processing or storage. Amazon Pinpoint customers can use these data points to create custom dashboards using a [Amazon QuickSight](https://aws.amazon.com/quicksight/) or a 3rd party business intelligence tool. 
+Amazon Pinpoint [event streaming capability](https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams.html), utilizes [Amazon Kinesis Firehose or Data Streams](https://aws.amazon.com/kinesis/) to stream the raw customer engagement events to an AWS service for further processing or storage. Amazon Pinpoint customers can use these data points to create custom dashboards using [Amazon QuickSight](https://aws.amazon.com/quicksight/) or a 3rd party business intelligence tool. 
 
 The Amazon Pinpoint streamed events include the Campaign, Journey and Segment Ids but they don't include their names making it challenging for users to identify them when building a custom report.
 
