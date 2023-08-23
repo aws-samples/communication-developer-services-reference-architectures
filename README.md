@@ -474,7 +474,7 @@ Amazon Pinpoint Campaigns, Journeys and Segments are Project specific resources 
 This solution utilizes AWS CloudFormation that invokes an AWS Lambda function upon deployment, which copies the specified Journeys from one Amazon Pinpoint Project to another. The solution can also copy journeys between AWS regions and have them created either in an existing Amazon Pinpoint Project or a new one.
 
 #### Architecture Diagram
-![Pinpoint Journey Copying Mechanism](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/Pinpoint_Journey_Copy_Mechanism/PinpointJourneyCopyProcess.png)
+![Pinpoint Journey Copying Mechanism](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Journey_Copy_Mechanism/PinpointJourneyCopyProcess.png)
 
 #### Use case(s)
   * Migration of Amazon Pinpoint Journeys from an old or staging Project to a new or production Project
