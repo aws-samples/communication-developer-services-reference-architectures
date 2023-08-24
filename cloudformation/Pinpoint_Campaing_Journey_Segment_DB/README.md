@@ -6,7 +6,7 @@ The Amazon Pinpoint streamed events include the Campaign, Journey and Segment Id
 ### Solution & Architecture
 This solution deploys a series of AWS services using [AWS CloudFormation](https://aws.amazon.com/cloudformation/) creating two [Amazon DynamoDB tables](https://aws.amazon.com/dynamodb/), one stores the mapping between Campaign/Journey Ids and their names while the second one stores the mapping between Segment Ids and their names. To query the Amazon DynamoDB data with [Amazon Athena](https://aws.amazon.com/athena/), you can use [this connector](https://docs.aws.amazon.com/athena/latest/ug/connectors-dynamodb.html).
 
-**Note**: The solution currently supports only dynamic segments. Imported segment names won't show in the segment table.
+**Note**: The solution will create the mappings for all existing **imported** and **dynamic** segments. However, only new **dynamic** segments will be added in the segment mapping table and not imported.
 
 [AWS CloudTrail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html) logs are used to process Amazon Pinpoint management events regarding Campaigns, Journeys and Segments. These events include Campaigns/Journeys/Segments created/deleted or updated in 5 minutes intervals (fixed interval from AWS CloudTrail). 
 
