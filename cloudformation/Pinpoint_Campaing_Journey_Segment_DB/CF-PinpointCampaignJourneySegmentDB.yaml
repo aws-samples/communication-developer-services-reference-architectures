@@ -464,7 +464,7 @@ Resources:
                 response = pinpoint.get_segments(ApplicationId = application_id, PageSize = '15')
                 segments = response['SegmentsResponse']['Item']
                 if len(segments) > 0:
-                    while 'NextToken' in response:
+                    while 'NextToken' in response['SegmentsResponse']:
                         response = pinpoint.get_segments( ApplicationId = application_id, PageSize = '15', Token = response['NextToken'])
                         segments.update(response['SegmentsResponse']['Item'])
                     for segment in segments:
