@@ -23,7 +23,7 @@ Fields:
 5. **Segment_id:** The segment_id used for this Campaign/Journey. A Campaign always has a segment whereas a journey might have **null**.
 6. **Type:** It's either **campaign** or **journey**.
 
-![dynamodb_campaignjourney](https://github.com/Pioank/pinpoint-campaign-journey-db/blob/main/Assets/DynamoDB-Campaign-Journey.PNG)
+![dynamodb_campaignjourney](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Campaing_Journey_Segment_DB/Assets/DynamoDB-Campaign-Journey.PNG)
 
 **Segments table:**
 Fields:
@@ -31,13 +31,13 @@ Fields:
 2. **Deleted:** False if it still exists and True if it has been deleted.
 3. **Name:** The segment name.
 
-![dynamodb_segments](https://github.com/Pioank/pinpoint-campaign-journey-db/blob/main/Assets/DynamoDB-Segments.PNG)
+![dynamodb_segments](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Campaing_Journey_Segment_DB/Assets/DynamoDB-Segments.PNG)
 
 Upon deployment of the AWS CloudFormation template, a custom resource (AWS Lambda) performs the following two actions:
 1. Creates Amazon DynamoDB items for all existing Amazon Pinpoint Campaigns, Journeys and Segments.
 2. Creates an Amazon S3 event notification so upon creation of a AWS CloudTrail log file, an AWS Lambda function gets invoked for processing.
 
-![architecture_outbound](https://github.com/Pioank/pinpoint-campaign-journey-db/blob/main/Assets/Architecture-Diagram.PNG)
+![architecture_outbound](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Campaing_Journey_Segment_DB/Assets/Architecture-Diagram.PNG)
 
 ### Solution logic
 1. Journeys whose state is **DRAFT** aren't being created in the Amazon DynamoDB table.
