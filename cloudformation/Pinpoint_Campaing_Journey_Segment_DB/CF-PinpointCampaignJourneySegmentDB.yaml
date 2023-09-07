@@ -421,8 +421,8 @@ Resources:
                 campaigns = response['CampaignsResponse']['Item']
                 if len(campaigns) > 0:
                     while 'NextToken' in response['CampaignsResponse']:
-                        response = pinpoint.get_campaigns( ApplicationId = application_id, PageSize = '15', Token = response['NextToken'])
-                        campaigns.update(response['CampaignsResponse']['Item'])
+                        response = pinpoint.get_campaigns( ApplicationId = application_id, PageSize = '15', Token = response['CampaignsResponse']['NextToken'])
+                        campaigns.extend(response['CampaignsResponse']['Item'])
                     for campaign in campaigns:
                         name = campaign['Name']
                         id_to_create = campaign['Id']
@@ -439,8 +439,8 @@ Resources:
                 journeys = response['JourneysResponse']['Item']
                 if len(journeys) > 0:
                     while 'NextToken' in response['JourneysResponse']:
-                        response = pinpoint.list_journeys( ApplicationId = application_id, PageSize = '15', Token = response['NextToken'])
-                        journeys.update(response['JourneysResponse']['Item'])
+                        response = pinpoint.list_journeys( ApplicationId = application_id, PageSize = '15', Token = response['JourneysResponse']['NextToken'])
+                        journeys.extend(response['JourneysResponse']['Item'])
                     for journey in journeys:
                         name = journey['Name']
                         id_to_create = journey['Id']
@@ -465,8 +465,8 @@ Resources:
                 segments = response['SegmentsResponse']['Item']
                 if len(segments) > 0:
                     while 'NextToken' in response['SegmentsResponse']:
-                        response = pinpoint.get_segments( ApplicationId = application_id, PageSize = '15', Token = response['NextToken'])
-                        segments.update(response['SegmentsResponse']['Item'])
+                        response = pinpoint.get_segments( ApplicationId = application_id, PageSize = '15', Token = response['SegmentsResponse']['NextToken'])
+                        segments.extend(response['SegmentsResponse']['Item'])
                     for segment in segments:
                         name = segment['Name']
                         id_to_create = segment['Id']
