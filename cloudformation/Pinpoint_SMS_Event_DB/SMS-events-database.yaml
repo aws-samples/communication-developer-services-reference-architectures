@@ -1,0 +1,659 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon S3 Triggered Amazon Pinpoint Import
+
+Parameters:
+
+  EventAthenaDatabaseName:
+    Type: String
+    Description: The name of the SMS Event Database all lower case.
+
+  CreateBucketName:
+    Type: String
+    Description: Type a globally unique Amazon S3 bucket name that will be used for the SMS events' storage.
+    
+Resources:
+
+#### GLUE & ATHENA
+##################################
+
+  PinpointSMSEventDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref EventAthenaDatabaseName
+        Description: "Amazon Pinpoint SMS Event Database"
+
+  EventTableAllNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointSMSEventDatabase
+      Description: "Create a Table for all SMS events"
+      QueryString:
+        !Sub
+          |
+            CREATE EXTERNAL TABLE IF NOT EXISTS `sms_events` (
+              eventType string,
+              eventVersion string,
+              eventTimestamp bigint,
+              messageRequestTimestamp bigint,
+              isFinal string,
+              originationPhoneNumber string,
+              destinationPhoneNumber string,
+              isoCountryCode string,
+              messageId string,
+              messageEncoding string,
+              messageType string,
+              messageStatus string,
+              messageStatusDescription string,
+              totalMessageParts int,
+              totalMessagePrice double,
+              totalCarrierFee double
+            )
+            PARTITIONED BY (ingest_timestamp timestamp)
+            STORED AS parquet
+            LOCATION "s3://${CreateBucketName}/events" 
+            TBLPROPERTIES ("parquet.compression"="SNAPPY")
+  
+  SMSstatusNamedQuery:
+    Type: AWS::Athena::NamedQuery
+    DeletionPolicy: Delete
+    Properties:
+      Database: !Ref PinpointSMSEventDatabase
+      Description: "Create a view for SMS delivery status"
+      QueryString:
+        !Sub
+          |
+            CREATE OR REPLACE VIEW sms_status AS
+            SELECT messageid, max(from_unixtime(eventtimestamp / 1000)) AS event_timestamp, 
+                max(eventtype) AS event_type, 
+                max(messagestatus) AS message_status, 
+                max(messagestatusdescription) AS message_status_description,
+                max(originationphonenumber) AS origination_phonenumber,
+                max(destinationphonenumber) AS destination_phonenumber,
+                max(isocountrycode) AS iso_countrycode,
+                max(messageencoding) AS message_encoding,
+                max(totalmessageparts) AS total_messageparts,
+                max(totalmessageprice) AS total_messageprice,
+                max(totalcarrierfee) AS total_carrierfee
+            FROM (
+              SELECT *, row_number() OVER (PARTITION BY messageid ORDER BY eventtimestamp DESC) AS seqnum
+              FROM sms_events
+            )
+            WHERE seqnum = 1
+            GROUP BY messageid
+
+#### AWS LAMBDAS
+##################################
+
+  ExecuteNamedQuery:
+    Type: Custom::LoadLambda
+    Properties:
+      ServiceToken: !GetAtt CustomResourceHelper.Arn
+      CustomResourceAction: ExecuteNamedQuery
+
+  CustomResourceHelper:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt CustomResourceHelperRole.Arn
+      Runtime: python3.9
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          S3_DATA_BUCKET: !Ref SMSS3DataLake
+          SMS_EVENTS_TABLE: !Ref EventTableAllNamedQuery
+          SMS_STATUS_VIEW: !Ref SMSstatusNamedQuery
+      Code:
+       ZipFile: |
+        import cfnresponse
+        import os
+        import logging
+        import traceback
+        import boto3
+        import json
+        import time
+
+        athena = boto3.client('athena')
+
+        def execute_named_queries(namedQueries):
+            try:
+                response = athena.batch_get_named_query(NamedQueryIds=namedQueries)
+                for q in response['NamedQueries']:
+                    start_query_response = athena.start_query_execution(
+                        QueryString=q['QueryString'],
+                        QueryExecutionContext={
+                          'Database': q['Database']
+                        },
+                        ResultConfiguration={
+                          'OutputLocation': 's3://%s/temp/' % (os.environ.get('S3_DATA_BUCKET'))
+                        }
+                    )
+                    while True:
+                        time.sleep(2)
+                        get_query_response = athena.get_query_execution(
+                            QueryExecutionId=start_query_response['QueryExecutionId']
+                        )
+
+                        if get_query_response['QueryExecution']['Status']['State'] == 'SUCCEEDED' or get_query_response['QueryExecution']['Status']['State'] == 'FAILED':
+                            logging.debug('Query Result for: %s' % (q['Name']), get_query_response)
+                            break
+            except Exception as error:
+                logging.error('execute_named_queries error: %s' % (error))
+                logging.error('execute_named_queries trace: %s' % traceback.format_exc())
+                raise
+
+        def lambda_handler(event, context):
+            log_level = str(os.environ.get('LOG_LEVEL')).upper()
+            if log_level not in [
+                              'DEBUG', 'INFO',
+                              'WARNING', 'ERROR',
+                              'CRITICAL'
+                          ]:
+              log_level = 'DEBUG'
+            logging.getLogger().setLevel(log_level)
+            logging.debug(event)
+
+            try:
+                if event['ResourceProperties']['CustomResourceAction'] == 'ExecuteNamedQuery':
+                    execute_named_queries([os.environ.get('SMS_EVENTS_TABLE')])
+                    execute_named_queries([os.environ.get('SMS_STATUS_VIEW')])
+                    cfnresponse.send(event, context, cfnresponse.SUCCESS, {"success": True}, 'ExecuteNamedQuery')
+                else:
+                    logging.error('Missing CustomResourceAction - no action to perform')
+                    cfnresponse.send(event, context, cfnresponse.FAILED, {"success": False, "error": "Missing CustomResourceAction"}, "error")
+
+            except Exception as error:
+                logging.error('lambda_handler error: %s' % (error))
+                logging.error('lambda_handler trace: %s' % traceback.format_exc())
+                cfnresponse.send(event, context, cfnresponse.FAILED, {"success": False, "error": "See Lambda Logs"}, "error")
+  
+  CustomResourceHelperRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+
+  CustomResourceHelperPolicy:
+      Type: AWS::IAM::Policy
+      Properties:
+        Roles:
+          - !Ref CustomResourceHelperRole
+        PolicyName: CustomResourceHelperPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            -
+              Effect: Allow
+              Action:
+                - "s3:GetBucketLocation"
+                - "s3:GetObject"
+                - "s3:ListBucket"
+                - "s3:ListBucketMultipartUploads"
+                - "s3:ListMultipartUploadParts"
+                - "s3:AbortMultipartUpload"
+                - "s3:CreateBucket"
+                - "s3:PutObject"
+              Resource:
+                - !Sub "arn:aws:s3:::${CreateBucketName}"
+                - !Sub "arn:aws:s3:::${CreateBucketName}*"
+            -
+              Effect: "Allow"
+              Action:
+                - "athena:StartQueryExecution"
+                - "athena:GetNamedQuery"
+                - "athena:BatchGetNamedQuery"
+                - "athena:GetQueryExecution"
+              Resource: !Sub "arn:aws:athena:${AWS::Region}:${AWS::AccountId}:workgroup/*"
+            -
+              Effect: "Allow"
+              Action:
+                - "glue:GetDatabase"
+                - "glue:GetDatabases"
+                - "glue:GetTable"
+                - "glue:GetTables"
+                - "glue:GetPartition"
+                - "glue:GetPartitions"
+                - "glue:CreateTable"
+              Resource:
+                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${EventAthenaDatabaseName}/*"
+                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${EventAthenaDatabaseName}"
+                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+            -
+              Effect: "Allow"
+              Action:
+                - "logs:CreateLogGroup"
+                - "logs:CreateLogStream"
+                - "logs:PutLogEvents"
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  S3InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AthenaPartitionLambda
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub arn:aws:s3:::${CreateBucketName}
+      SourceAccount: !Ref "AWS::AccountId"
+
+  AthenaPartitionLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt AthenaPartitionLambdaRole.Arn
+      Runtime: python3.9
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          DATABASE_NAME: !Ref EventAthenaDatabaseName
+      Code:
+       ZipFile: |             
+        import json
+        import boto3
+        import logging
+        import traceback
+        import datetime
+        import json
+        import os
+        import urllib.request, urllib.error, urllib.parse
+
+        client = boto3.client('athena')
+
+        def lambda_handler(event, context):
+            log_level = str(os.environ.get('LOG_LEVEL')).upper()
+            if log_level not in [
+                                'DEBUG', 'INFO',
+                                'WARNING', 'ERROR',
+                                'CRITICAL'
+                            ]:
+              log_level = 'DEBUG'
+            logging.getLogger().setLevel(log_level)
+
+            logging.debug(event)
+
+            try:
+                for record in event['Records']:
+                    key = record['s3']['object']['key']
+                    parts = key.split('/')
+
+                    s3Bucket = 's3://' + record['s3']['bucket']['name']
+
+                    query = "ALTER TABLE sms_events ADD IF NOT EXISTS PARTITION (ingest_timestamp='%s-%s-%s %s:00:00') LOCATION '%s/%s/%s/%s/%s'" % (parts[1], parts[2], parts[3], parts[4], s3Bucket + '/events', parts[1], parts[2], parts[3], parts[4])
+
+                    logging.debug(query)
+
+                    response = client.start_query_execution(
+                      QueryString=query,
+                      QueryExecutionContext={
+                          'Database': os.environ.get('DATABASE_NAME')
+                      },
+                      ResultConfiguration={
+                          'OutputLocation': s3Bucket + '/temp'
+                      }
+                    )
+                    logging.debug(response)
+
+            except Exception as error:
+                logging.error('lambda_handler error: %s' % (error))
+                logging.error('lambda_handler trace: %s' % traceback.format_exc())
+                result = {
+                    'statusCode': '500',
+                    'body':  {'message': 'error'}
+                }
+                return json.dumps(result)
+  
+  AthenaPartitionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  AthenaPartitionLambdaRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref AthenaPartitionLambdaRole
+      PolicyName: "AthenaPartitionLambdaRolePolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "s3:GetBucketLocation"
+              - "s3:GetObject"
+              - "s3:ListBucket"
+              - "s3:ListBucketMultipartUploads"
+              - "s3:ListMultipartUploadParts"
+              - "s3:AbortMultipartUpload"
+              - "s3:CreateBucket"
+              - "s3:PutObject"
+            Resource:
+              - !Sub arn:aws:s3:::${CreateBucketName}
+              - !Sub arn:aws:s3:::${CreateBucketName}/*
+          -
+            Effect: "Allow"
+            Action:
+              - "athena:StartQueryExecution"
+            Resource: !Sub "arn:aws:athena:${AWS::Region}:${AWS::AccountId}:workgroup/*"
+          -
+            Effect: "Allow"
+            Action:
+              - "glue:GetDatabase"
+              - "glue:GetDatabases"
+              - "glue:GetTable"
+              - "glue:GetTables"
+              - "glue:GetPartition"
+              - "glue:GetPartitions"
+              - "glue:CreateTable"
+              - "glue:CreatePartition"
+              - "glue:BatchCreatePartition"
+            Resource:
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${EventAthenaDatabaseName}/*"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${EventAthenaDatabaseName}"
+              - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+          -
+            Effect: "Allow"
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  ##### S3 BUCKETS
+  #######################################
+
+  SMSS3DataLake:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: Not public facing.
+    Properties:
+      BucketName: !Ref CreateBucketName
+      OwnershipControls:
+        Rules:
+         - ObjectOwnership: BucketOwnerPreferred
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LogBucket
+        LogFilePrefix: sms-event-processing/
+      NotificationConfiguration:
+        LambdaConfigurations:
+          -
+            Event: "s3:ObjectCreated:*"
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: "prefix"
+                    Value: "events/"
+            Function: !GetAtt AthenaPartitionLambda.Arn
+
+  SMSS3DataLakePolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SMSS3DataLake
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: AllowSSLRequestsOnly
+          Effect: Deny
+          Principal: "*"
+          Action: "s3:*"
+          Resource:
+            - !Sub "arn:aws:s3:::${CreateBucketName}/*"
+            - !Sub "arn:aws:s3:::${CreateBucketName}"
+          Condition:
+            Bool:
+              "aws:SecureTransport": "false"
+  LogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: This is the log bucket.
+    Properties:
+      AccessControl: LogDeliveryWrite
+      OwnershipControls:
+        Rules:
+         - ObjectOwnership: BucketOwnerPreferred
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Sid: AWSCloudTrailAclCheck
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:GetBucketAcl"
+          Resource: !Sub arn:aws:s3:::${LogBucket}
+        - Sid: AWSCloudTrailWrite
+          Effect: Allow
+          Principal:
+            Service: cloudtrail.amazonaws.com
+          Action: "s3:PutObject"
+          Resource: !Sub arn:aws:s3:::${LogBucket}/AWSLogs/${AWS::AccountId}/*
+          Condition:
+            StringEquals:
+              "s3:x-amz-acl": "bucket-owner-full-control"
+        - Sid: LogBucketAllowSSLRequestsOnly
+          Effect: Deny
+          Principal: "*"
+          Action: "s3:*"
+          Resource:
+            - !Sub "arn:aws:s3:::${LogBucket}/*"
+            - !Sub "arn:aws:s3:::${LogBucket}"
+          Condition:
+            Bool:
+              "aws:SecureTransport": "false"
+
+  #### KINESIS FIREHOSE - Pinpoint
+  #######################################
+
+  PinpointSMSEventFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    DependsOn: ExecuteNamedQuery
+    Properties:
+      DeliveryStreamType: "DirectPut"
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Sub "arn:aws:s3:::${SMSS3DataLake}"
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 128
+        DataFormatConversionConfiguration:
+          Enabled: true
+          InputFormatConfiguration:
+            Deserializer:
+              OpenXJsonSerDe: {}
+          OutputFormatConfiguration:
+            Serializer:
+              ParquetSerDe: {}
+          SchemaConfiguration:
+            DatabaseName: !Ref EventAthenaDatabaseName
+            Region: !Ref AWS::Region
+            RoleARN: !GetAtt PinpointSMSKinesisFirehoseRole.Arn
+            TableName: "sms_events"
+            VersionId: "LATEST"
+            CatalogId: !Ref AWS::AccountId
+        CompressionFormat: "UNCOMPRESSED"
+        Prefix: "events/"
+        ErrorOutputPrefix: "errors/"
+        RoleARN: !GetAtt PinpointSMSKinesisFirehoseRole.Arn
+        CloudWatchLoggingOptions:
+          Enabled: true
+          LogGroupName: !Sub "/aws/kinesisfirehose/${AWS::StackName}-pinpoint-sms-eventstream-firehose"
+          LogStreamName: "S3DeliveryErrors"
+
+  KinesisFirehoseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/kinesisfirehose/${AWS::StackName}-pinpoint-sms-eventstream-firehose"
+
+  KinesisFirehoseLogStreamName:
+    Type: AWS::Logs::LogStream
+    DependsOn: KinesisFirehoseLogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/kinesisfirehose/${AWS::StackName}-pinpoint-sms-eventstream-firehose"
+      LogStreamName: "S3DeliveryErrors"
+
+  PinpointSMSKinesisFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - firehose.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "s3:AbortMultipartUpload"
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:PutObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${CreateBucketName}/*"
+                  - !Sub "arn:aws:s3:::${CreateBucketName}"
+              -
+                Effect: "Allow"
+                Action:
+                  - "glue:GetTable"
+                  - "glue:GetTableVersion"
+                  - "glue:GetTableVersions"
+                Resource:
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${EventAthenaDatabaseName}/*"
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${EventAthenaDatabaseName}"
+                  - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              -
+                Effect: "Allow"
+                Action: "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/kinesisfirehose/*:log-stream:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+#### PINPOINT SMS 
+##################################
+
+  PinpointSMSFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - sms-voice.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "firehose:PutRecord"
+                  - "firehose:PutRecordBatch"
+                  - "firehose:DescribeDeliveryStream"
+                Resource: !GetAtt PinpointSMSEventFirehose.Arn
+
+Outputs:
+  PinpointSMSFirehoseRole:
+    Description: The IAM role ARN created for Amazon Pinpoint to assume and publish events to Amazon Kinesis Firehose.
+    Value: !GetAtt PinpointSMSFirehoseRole.Arn
+  KinesisFirehose:
+    Description: The Amazon Kinesis Firehose ARN.
+    Value: !GetAtt PinpointSMSEventFirehose.Arn
