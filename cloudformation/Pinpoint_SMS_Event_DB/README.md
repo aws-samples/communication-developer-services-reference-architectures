@@ -6,7 +6,7 @@ This solution is relevant for anyone using [Amazon Pinpoint's SMS and Voice v2 A
 
 ## Solution
 
-![sms-event-db-architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_Journey_Copy_Mechanism/PinpointJourneyCopyProcess.png)
+![sms-event-db-architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-event-db-architecture.PNG)
 
 The solution presented in this repository, utilizes AWS CloudFormation to deploy an Amazon Kinesis Firehose, an Amazon S3 bucket, an AWS Glue database and an Amazon Athena table for streaming, storing and querying the SMS events respectively.
 
@@ -25,14 +25,13 @@ The solution creates one table with all SMS events and one Amazon Athena view, w
 
 ## Implementation
 
-1. Navigate to the AWS CloudShell in the AWS region you want to deploy the solution. 
-2. Execute the command below to 
-3. Fill the template parameters as shown below to copy the AWS CloudFormation template in the local storage:
+1. Navigate to the AWS CloudShell in the AWS region you want to deploy the solution. If AWS CloudShell isn't available in the AWS region you want to use, then use the [AWS CLI locally](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+2. Execute the command below to copy the AWS CloudFormation template in the local storage:
 
 ```
-wget https://ws-assets-prod-iad-r-iad-ed304a55c2ca1aee.s3.us-east-1.amazonaws.com/32ec2c48-da46-490f-929d-5fea7fcb983b/SMS-events-database.yaml
+wget https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-events-database.yaml
 ```
-4. The Amazon S3 bucket name needs to be unique, thus the commands below will create a unique name using a static string, your AWS account Id and a random five characters string.
+3. The Amazon S3 bucket name needs to be unique, thus the commands below will create a unique name using a static string, your AWS account Id and a random five characters string.
 
 ```
 # Get the AWS account ID
@@ -51,7 +50,7 @@ BUCKET_NAME="sms-db-${ACCOUNT_ID}-${RANDOM_ID}"
 echo "S3 Bucket name: ${BUCKET_NAME}"
 ```
 
-5. To deploy the AWS CloudFormation stack execute the AWS CLI command [deploy](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/) below. This AWS CloudFormation template includes two parameters:
+4. To deploy the AWS CloudFormation stack execute the AWS CLI command [deploy](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/) below. This AWS CloudFormation template includes two parameters:
 - **EventAthenaDatabaseName:** The name of the AWS Glue database that will be created as part of this solution.
 - **CreateBucketName:** The Amazon S3 bucket, where all SMS events will be stored.
 
@@ -66,7 +65,7 @@ aws cloudformation deploy \
 --output table
 ```
 
-6. The AWS CloudFormation deployed has two outputs: the Amazon Kinesis Firehose ARN and Amazon Kinesis Firehose IAM role ARN. Copy the **OutputValue** for both **KinesisFirehose** and **PinpointSMSFirehoseRole** as they will be needed to create an SMS event destination and send a test SMS respectively. Execute the command below in AWS CloudShell to obtain the Amazon Kinesis Firehose ARN and Amazon Kinesis Firehose IAM role ARN. 
+5. The AWS CloudFormation deployed has two outputs: the Amazon Kinesis Firehose ARN and Amazon Kinesis Firehose IAM role ARN. Copy the **OutputValue** for both **KinesisFirehose** and **PinpointSMSFirehoseRole** as they will be needed to create an SMS event destination and send a test SMS respectively. Execute the command below in AWS CloudShell to obtain the Amazon Kinesis Firehose ARN and Amazon Kinesis Firehose IAM role ARN. 
 
 ```
 aws cloudformation describe-stacks --stack-name Pinpoint-SMS-Database --query "Stacks[].Outputs"
@@ -87,7 +86,7 @@ echo "Kinesis Firehose Arn: $KINESIS_FIREHOSE_ARN"
 echo "Kinesis Firehose IAM Role Arn: $KINESIS_IAM_ROLE_ARN"
 ```
 
-7. Create a new event destination that will stream all SMS events to the Amazon S3 bucket created by the solution. Before executing the AWS CLI command below, make sure you have replaced the placeholders for **CONFIG_NAME** with the name of the configuration set you will be using to send SMS.
+6. Create a new event destination that will stream all SMS events to the Amazon S3 bucket created by the solution. Before executing the AWS CLI command below, make sure you have replaced the placeholders for **CONFIG_NAME** with the name of the configuration set you will be using to send SMS.
 
 ```
 aws pinpoint-sms-voice-v2 create-event-destination \
