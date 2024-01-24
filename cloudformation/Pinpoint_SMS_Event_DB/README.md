@@ -2,13 +2,13 @@
 
 ## Description
 
-This solution is relevant for anyone using [Amazon Pinpoint's SMS and Voice v2 API](https://docs.aws.amazon.com/pinpoint/latest/apireference_smsvoicev2/Welcome.html). It enables you to store SMS events and query them using SQL.
+This solution is relevant for anyone planning to use or using [Amazon Pinpoint's SMS and Voice v2 API](https://docs.aws.amazon.com/pinpoint/latest/apireference_smsvoicev2/Welcome.html) to send SMS. It enables you to store SMS events in Amazon S3 and perform SQL queries using Amazon Athena.
 
 ## Solution
 
 ![sms-event-db-architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-event-db-architecture.PNG)
 
-The solution presented in this repository, utilizes AWS CloudFormation to deploy an Amazon Kinesis Firehose, an Amazon S3 bucket, an AWS Glue database and an Amazon Athena table for streaming, storing and querying the SMS events respectively.
+The solution presented in this repository, utilizes AWS CloudFormation to deploy an Amazon Kinesis Firehose, an Amazon S3 bucket, an AWS Glue database and an Amazon Athena table for streaming, storing and querying SMS engagement events respectively.
 
 Some information regarding the AWS services used in the solution:
 - **Amazon Kinesis Data Firehose** is an extract, transform, and load (ETL) service that reliably captures, transforms, and delivers streaming data to data lakes, data stores, and analytics services. 
