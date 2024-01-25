@@ -346,8 +346,8 @@ GROUP BY messagetype
 * Campaign Reporting
 * Machine Learning Training / Retraining
 
-#### AWS CloudFormation Link
-[CF Template](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-events-database.yaml)
+#### GitHub repository Link
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_SMS_Event_DB)
 
 ------
 
