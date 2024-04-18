@@ -27,7 +27,7 @@ Resources:
             AssumeRolePolicyDocument: {Version: '2012-10-17', Statement: [{Effect: Allow, Principal: {Service: [lambda.amazonaws.com]}, Action: ['sts:AssumeRole']}]}
             Policies:
             - PolicyName: cloudwatch_write_policy
-              PolicyDocument: {Version: '2012-10-17', Statement: [{Effect: Allow, Action: ['logs:CreateLogGroup','logs:CreateLogStream','logs:PutLogEvents','logs:DescribeLogStreams'], "Resource" :['arn:aws:logs:*:*:log-group:/aws/ses/*']}]}
+              PolicyDocument: {Version: '2012-10-17', Statement: [{Effect: Allow, Action: ['logs:CreateLogGroup','logs:CreateLogStream','logs:PutLogEvents','logs:DescribeLogStreams'], "Resource" :['arn:aws:logs:*:*:log-group:/aws/lambda/*','arn:aws:logs:*:*:log-group:/aws/ses/*']}]}
             Path: /
     SnsSubscription:
         Type: AWS::SNS::Subscription
