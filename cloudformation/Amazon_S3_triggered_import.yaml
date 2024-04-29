@@ -31,7 +31,7 @@ Resources:
     Properties:
       Handler: index.lambda_handler
       Role: !GetAtt ImportSegmentLambdaRole.Arn
-      Runtime: python3.7
+      Runtime: python3.12
       Timeout: 60
       Environment:
         Variables:
@@ -162,7 +162,7 @@ Resources:
     Properties:
       Handler: index.lambda_handler
       Role: !GetAtt ImportSegmentStatusLambdaRole.Arn
-      Runtime: python3.7
+      Runtime: python3.12
       Timeout: 60
       Environment:
         Variables:
@@ -407,7 +407,7 @@ Resources:
     Properties:
       Handler: index.lambda_handler
       Role: !GetAtt S3NotificationLambdaFunctionRole.Arn
-      Runtime: python3.7
+      Runtime: python3.12
       Timeout: 30
       Environment:
         Variables:
@@ -508,7 +508,7 @@ Resources:
     Properties:
       Handler: index.lambda_handler
       Role: !GetAtt CustomResourceLambdaFunctionRole.Arn
-      Runtime: python3.7
+      Runtime: python3.12
       Timeout: 50
       Code:
         ZipFile: |
