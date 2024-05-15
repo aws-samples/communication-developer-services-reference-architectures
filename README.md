@@ -14,6 +14,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Pinpoint Event Processing](#Pinpoint-Event-Processing)
   * [Pinpoint S3 Event Database](#Pinpoint-S3-Event-Database)
   * [Pinpoint SMS S3 Event Database](#Pinpoint-SMS-S3-Event-Database)
+  * [SES email S3 Event Database](#SES-email-S3-Event-Database)
   * [Pinpoint Message Archiver](#Pinpoint-Message-Archiver)
   * [Add / Remove from Segments via Event Activity](#add--remove-from-segments-via-event-activity)
   * [Simple CMS or Static Website Host](#simple-cms-or-static-website-host)
@@ -322,7 +323,7 @@ ORDER BY a.event_timestamp DESC
 
 #### Description
 
-Sending outbound messages with [Pinpoint SMS](https://docs.aws.amazon.com/sms-voice/latest/userguide/what-is-service.html) allows you to track engagement events. These events provide a wealth of knowledge on the delivery status of your messages and Pinpoint SMS allows you to publish these events on Amazon SNS topic, Amazon CloudWatch logs or stream them to an Amazon S3 buckt to create a data lake which is excellent for mining, analysis, and future machine learning training and retraining.  
+Sending outbound messages with [Pinpoint SMS](https://docs.aws.amazon.com/sms-voice/latest/userguide/what-is-service.html) allows you to track engagement events. These events provide a wealth of knowledge on the delivery status of your messages and Pinpoint SMS allows you to publish these events on Amazon SNS topic, Amazon CloudWatch logs or stream them to an Amazon S3 bucket to create a data lake which is excellent for mining, analysis, and future machine learning training and retraining.  
 
 The architecture below shows how Pinpoint SMS can use Amazon Kinesis Firehose as an event destination to stream SMS engagement events and store them into an S3 bucket.
 
@@ -337,7 +338,7 @@ GROUP BY messagetype
 
 #### Architecture Diagram
 
-![Screenshot](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-event-db-architecture.PNG)
+![pinpoint-sms-event-db-architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-event-db-architecture.PNG)
 
 #### Use-Case
 
@@ -348,6 +349,41 @@ GROUP BY messagetype
 
 #### GitHub repository Link
 [GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/Pinpoint_SMS_Event_DB)
+
+------
+
+### SES email S3 Event Database
+
+#### Description
+
+Amazon SES tracks email engagement events, which provide a wealth of knowledge on the delivery status of your messages. Using the [event publishing(https://docs.aws.amazon.com/ses/latest/dg/monitor-using-event-publishing.html) feature, these email engagement events can be streamed using Amazon Kinesis Firehose, publish them on an Amazon SNS topic  allows or on Amazon CloudWatch.  
+
+The architecture below shows how Amazon SES can use Amazon Kinesis Firehose as an event destination to stream email engagement events and store them into an S3 bucket.
+
+This enables Athena Queries to be run against each event type as a flattened view, allowing for queries like:
+
+Ex: Check the email delivery status for a specific email address
+```
+SELECT *
+FROM "ses-eventsdb"."email_status"
+CROSS JOIN UNNEST(destination) AS t(email)
+WHERE t.email = 'email@address.com'
+ORDER BY time_sent DESC;
+```
+
+#### Architecture Diagram
+
+![ses-event-db-architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Event_DB/email-event-db-architecture.PNG)
+
+#### Use-Case
+
+* Data Mining
+* Engagement Analysis
+* Campaign Reporting
+* Machine Learning Training / Retraining
+
+#### GitHub repository Link
+[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/tree/master/cloudformation/SES_Event_DB)
 
 ------
 
