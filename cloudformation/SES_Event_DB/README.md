@@ -60,7 +60,7 @@ echo "SES Configuration set name: ${CONFIGRUATION_NAME}"
 - **NewConfigurationSet:** If you want to use an existing SES configuration set, type "NO", otherwise type "YES" to create a new SES configuration set. The AWS CLI command below is populated with the value "YES", which will create a new SES configuration set.
 - **ConfigurationSetName:** This is the configuration set name that will be either created or updated, depending the value you have set under **NewConfigurationSet**. The AWS CLI command below is populated with the configuration set name "event-db-config".
 
-::alert[The AWS CloudFormation template deployment time should is between 4 - 6 minutes.]{header="Note"}
+:warning: **Note:** The AWS CloudFormation template deployment time should be between 4 - 6 minutes.
 
 ```
 aws cloudformation deploy \
