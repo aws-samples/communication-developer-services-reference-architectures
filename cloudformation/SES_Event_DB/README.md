@@ -20,7 +20,7 @@ The solution creates one table with all email events and one Amazon Athena view,
 
 ## Prerequisites
 
-1. Access to Amazon Pinpoint, AWS CloudShell and IAM policies assigned to your AWS user that allow you to deploy an AWS CloudFormation templates, manage Amazon Athena, Amazon S3, Amazon Kinesis Firehose and AWS Glue resources.
+1. Access to Amazon SES, AWS CloudShell and IAM policies assigned to your AWS user that allow you to deploy an AWS CloudFormation templates, manage Amazon Athena, Amazon S3, Amazon Kinesis Firehose and AWS Glue resources.
 2. Verify at least one email address for testing purposes. Read [Creating and verifying identities in Amazon SES](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html) for more information.
 
 ## Implementation
@@ -46,7 +46,7 @@ while [ ${#RANDOM_ID} -lt 5 ]; do
 done
 
 # Create an S3 bucket with a unique name (lowercase)
-BUCKET_NAME="sms-db-${ACCOUNT_ID}-${RANDOM_ID}"
+BUCKET_NAME="ses-db-${ACCOUNT_ID}-${RANDOM_ID}"
 echo "S3 Bucket name: ${BUCKET_NAME}"
 
 # The Amazon SES configuration set name
@@ -56,7 +56,7 @@ echo "SES Configuration set name: ${CONFIGRUATION_NAME}"
 
 4. To deploy the AWS CloudFormation stack execute the AWS CLI command [deploy](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/) below. This AWS CloudFormation template includes two parameters:
 - **EventAthenaDatabaseName:** The name of the AWS Glue database that will be created as part of this solution.
-- **CreateBucketName:** The Amazon S3 bucket, where all SMS events will be stored.
+- **CreateBucketName:** The Amazon S3 bucket, where all email events will be stored.
 - **NewConfigurationSet:** If you want to use an existing SES configuration set, type "NO", otherwise type "YES" to create a new SES configuration set. The AWS CLI command below is populated with the value "YES", which will create a new SES configuration set.
 - **ConfigurationSetName:** This is the configuration set name that will be either created or updated, depending the value you have set under **NewConfigurationSet**. The AWS CLI command below is populated with the configuration set name "event-db-config".
 
