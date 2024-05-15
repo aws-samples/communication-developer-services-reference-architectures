@@ -356,7 +356,7 @@ GROUP BY messagetype
 
 #### Description
 
-Amazon SES tracks email engagement events, which provide a wealth of knowledge on the delivery status of your messages. Using the [event publishing(https://docs.aws.amazon.com/ses/latest/dg/monitor-using-event-publishing.html) feature, these email engagement events can be streamed using Amazon Kinesis Firehose, publish them on an Amazon SNS topic  allows or on Amazon CloudWatch.  
+Amazon SES tracks email engagement events, which provide a wealth of knowledge on the delivery status of your messages. Using the [event publishing](https://docs.aws.amazon.com/ses/latest/dg/monitor-using-event-publishing.html) feature, these email engagement events can be streamed using Amazon Kinesis Firehose, publish them on an Amazon SNS topic  allows or on Amazon CloudWatch.  
 
 The architecture below shows how Amazon SES can use Amazon Kinesis Firehose as an event destination to stream email engagement events and store them into an S3 bucket.
 
