@@ -54,7 +54,7 @@ echo "S3 Bucket name: ${BUCKET_NAME}"
 - **EventAthenaDatabaseName:** The name of the AWS Glue database that will be created as part of this solution.
 - **CreateBucketName:** The Amazon S3 bucket, where all SMS events will be stored.
 
-::alert[The AWS CloudFormation template deployment time should is between 4 - 6 minutes.]{header="Note"}
+:warning: **Note:** The AWS CloudFormation template deployment time should be between 4 - 6 minutes.
 
 ```
 aws cloudformation deploy \
