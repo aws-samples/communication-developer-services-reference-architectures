@@ -6,7 +6,7 @@ This solution is relevant for anyone planning to or already sending emails using
 
 ## Solution
 
-![sms-event-db-architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-event-db-architecture.PNG)
+![ses-event-db-architecture](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Event_DB/email-event-db-architecture.PNG)
 
 The solution presented in this repository, utilizes AWS CloudFormation to deploy an Amazon Kinesis Firehose, an Amazon S3 bucket, an AWS Glue database and an Amazon Athena table for streaming, storing and querying email engagement events respectively.
 
@@ -29,7 +29,7 @@ The solution creates one table with all email events and one Amazon Athena view,
 2. Execute the command below to copy the AWS CloudFormation template in the local storage:
 
 ```
-wget https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/Pinpoint_SMS_Event_DB/SMS-events-database.yaml
+wget https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Event_DB/ses-events-db.yaml
 ```
 3. The Amazon S3 bucket name needs to be unique, thus the commands below will create a unique name using a static string, your AWS account Id and a random five characters string.
 
