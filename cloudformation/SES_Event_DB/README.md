@@ -50,8 +50,8 @@ BUCKET_NAME="ses-db-${ACCOUNT_ID}-${RANDOM_ID}"
 echo "S3 Bucket name: ${BUCKET_NAME}"
 
 # The Amazon SES configuration set name
-CONFIGRUATION_NAME="event-db-config"
-echo "SES Configuration set name: ${CONFIGRUATION_NAME}"
+CONFIGURATION_NAME="event-db-config"
+echo "SES Configuration set name: ${CONFIGURATION_NAME}"
 ```
 
 4. To deploy the AWS CloudFormation stack execute the AWS CLI command [deploy](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/) below. This AWS CloudFormation template includes two parameters:
@@ -66,7 +66,7 @@ echo "SES Configuration set name: ${CONFIGRUATION_NAME}"
 aws cloudformation deploy \
 --template-file "ses-events-db.yaml" \
 --stack-name SES-Email-Database \
---parameter-overrides EventAthenaDatabaseName="ses_event_db" CreateBucketName="${BUCKET_NAME}" NewConfigurationSet="YES" ConfigurationSetName=${CONFIGRUATION_NAME}\
+--parameter-overrides EventAthenaDatabaseName="ses_event_db" CreateBucketName="${BUCKET_NAME}" NewConfigurationSet="YES" ConfigurationSetName="${CONFIGURATION_NAME}"\
 --capabilities CAPABILITY_NAMED_IAM \
 --output table
 ```
@@ -78,7 +78,7 @@ aws sesv2 send-email \
 --from-email-address "your-email@example.com" \
 --destination '{"ToAddresses":["success@simulator.amazonses.com"]}' \
 --content "{\"Simple\": {\"Subject\": {\"Data\": \"Hello world\"}, \"Body\": {\"Html\": {\"Data\": \"<h1>This is SES</h1>\"}}}}" \
---configuration-set-name CONFIGRUATION_NAME
+--configuration-set-name "${CONFIGURATION_NAME}"
 
 ```
 
