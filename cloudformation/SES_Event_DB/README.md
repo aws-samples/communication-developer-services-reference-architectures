@@ -71,7 +71,45 @@ aws cloudformation deploy \
 --output table
 ```
 
-5. To test the solution, send 4 - 5 emails using the AWS CLI command below. Make sure you update the email address under **from-email-address** field with an email address that you have verified in Amazon SES. Wait 2 minutes and navigate to the Amazon Athena console, where you can preview the table and Athena under the database with name **ses_event**. 
+5. Below you can find the Athena table and view
+
+**Athena table**
+[Example Athena table data](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Event_DB/example-data/ses_events_table.csv)
+
+  | Field Name         | Description                                                     |
+|--------------------|-----------------------------------------------------------------|
+| `eventtype`        | Type of event, e.g., Send, Delivery, Complaint, Bounce, Open    |
+| `mail`             | Details of the mail including timestamps and sender information |
+| `send`             | Details when the email was sent                                 |
+| `delivery`         | Delivery details including timestamp and processing time        |
+| `open`             | Open event details including IP address and timestamp           |
+| `click`            | Click event details including the link clicked                  |
+| `bounce`           | Bounce details including type, subtype, and diagnostics         |
+| `complaint`        | Complaint details including feedback type and user agent        |
+| `reject`           | Reject event details                                            |
+| `failure`          | Failure event details                                           |
+| `ingest_timestamp` | Timestamp when the event was ingested                             |
+
+**Athena view**
+[Example Athen view data](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Event_DB/example-data/email_status_view.csv)
+
+| Field Name             | Description                                    |
+|------------------------|------------------------------------------------|
+| `message_id`           | Unique identifier for the email message        |
+| `subject`              | Subject line of the email                      |
+| `destination`          | Recipient email addresses in an array          |
+| `time_sent`            | Timestamp when email was sent                  |
+| `time_delivered`       | Timestamp when email was delivered             |
+| `time_clicked`         | Timestamp when a link in the email was clicked |
+| `time_opened`          | Timestamp when email was opened                |
+| `time_bounced`         | Timestamp when email was bounced               |
+| `bounce_type`          | Type of bounce, e.g., Permanent, Transient     |
+| `bounce_subtype`       | More specific bounce category                  |
+| `time_complained`      | Timestamp when a complaint was made            |
+| `complaint_feedbacktype` | Type of complaint feedback, e.g., abuse        |
+
+
+6. To test the solution, send 4 - 5 emails using the AWS CLI command below. Make sure you update the email address under **from-email-address** field with an email address that you have verified in Amazon SES. Wait 2 minutes and navigate to the Amazon Athena console, where you can preview the table and Athena under the database with name **ses_event**. 
 
 ```
 aws sesv2 send-email \
@@ -80,5 +118,22 @@ aws sesv2 send-email \
 --content "{\"Simple\": {\"Subject\": {\"Data\": \"Hello world\"}, \"Body\": {\"Html\": {\"Data\": \"<h1>This is SES</h1>\"}}}}" \
 --configuration-set-name "${CONFIGURATION_NAME}"
 
+```
+7. Query the data using SQL. Make sure you replace **<your_db_name>** and **<to_email_address>** with your data.
+
+Execute the queries below to:
+
+Preview the **ses_events** table.
+```
+SELECT * FROM "<your_db_name>"."ses_events"
+```
+
+Get the status of emails sent to a specific email address. You can edit this query to filter by other fields such as date sent or email address sent from. 
+```
+SELECT *
+FROM "<your_db_name>"."email_status"
+CROSS JOIN UNNEST(destination) AS t(email)
+WHERE t.email = '<to_email_address>'
+ORDER BY time_sent DESC;
 ```
 
