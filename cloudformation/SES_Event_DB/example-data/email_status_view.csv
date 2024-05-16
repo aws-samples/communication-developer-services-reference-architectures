@@ -1,0 +1,6 @@
+"message_id","subject","destination","time_sent","time_delivered","time_clicked","time_opened","time_bounced","bounce_type","bounce_subtype","time_complained","complaint_feedbacktype"
+"0101018f7bc571e6-4ceaf257-3b22-48b0-975e-83d69b6c71aa-000000","Complaint1","[complaint@simulator.amazonses.com]","2024-05-15T10:21:28.422Z","2024-05-15T10:21:29.566Z",,"2024-05-15T10:21:47.754Z",,,,"2024-05-15T10:21:30.466Z","abuse"
+"0101018f7bc4a0fc-8ee5df2d-ab9b-4032-93ce-6cb7ba201f59-000000","Subject2","[email@example.com]","2024-05-15T10:20:34.940Z","2024-05-15T10:20:35.894Z",,"2024-05-15T10:21:40.343Z",,,,,
+"0101018f7bc4d418-5c567434-5100-4efa-9c5f-bb9e620bf5ee-000000","Subject3","[email@example.com]","2024-05-15T10:20:48.024Z","2024-05-15T10:20:48.736Z",,"2024-05-15T10:21:43.755Z",,,,,
+"0101018f7bc5451b-b60b87ea-33fc-4dab-a4d3-50cdfb0eab72-000000","Bounce1","[bounce@simulator.amazonses.com]","2024-05-15T10:21:16.955Z",,,,"2024-05-15T10:21:17.610Z","Permanent","General",,
+"0101018f7c9dbf22-58e5cc54-4bf5-44a9-b329-1bca093e5f3a-000000","Subject","[success@simulator.amazonses.com]","2024-05-15T14:17:43.970Z","2024-05-15T14:17:44.511Z",,,,,,,
