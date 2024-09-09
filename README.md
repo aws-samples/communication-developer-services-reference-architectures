@@ -7,6 +7,7 @@ A repository of reference architectures for AWS Digital User Engagement services
 * [Amazon SES Basics](#user-content-amazon-ses-basics)
   * [SES Event Processing](#SES-Event-Processing)
   * [SES Auto-Reply](#SES-Auto-Reply)
+  * [SES VDM Stat Export](#SES-VDM-Stat-Export)
 * [Amazon Pinpoint Basics](#user-content-amazon-pinpoint-basics)
   * [Amazon S3 Triggered Endpoint Imports](#Amazon-S3-Triggered-Endpoint-Imports)
   * [Automatic Phone Number Validate](#Automatic-Phone-Number-Validate)
@@ -100,6 +101,34 @@ Notes:
 * [Receiving email with Amazon SES](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/receiving-email.html)
 
 ------
+
+### SES VDM Stat Export
+
+#### Description
+
+In the majority of cases, business and finance teams require monthly VDM data for the purposes of validation and billing requirements. The people in question are not typically users of the Amazon Web Services interface, and they do not have any notion how to use the AWS console. In these kinds of situations, the business stakeholders desire a monthly email send report to be delivered to their email box. This report will allow them to take the next action steps, such as arranging to bill or observing the sending pattern, among other things. In addition, Independent Software Vendors (ISVs) that use Amazon Simple Email Service (SES) to send emails on behalf of their customers require these monthly VDM statistics to be supplied on a regular basis to their billing management teams. This allows the teams to plan the accountings for the end customers and track the margins. 
+
+Using the architecture that is presented below, it is possible to implement a templated auto-response mechanism that sets a VDM export operation to run on the first day of each month in order to obtain the statistics for the previous month. This data is subsequently sent to end users who are concerned about it. Within this architecture, Amazon Event bridge is responsible for triggering a timely event scheduling job, which triggers a step function that calls Amazon SES through v2 Apis in order to create a VDM export job. The same step function is then responsible for obtaining the acquire export job. In addition to distributing a pre-signed URL, the get export job is responsible for deploying this monthly report to an S3 location. Through ARNS, the same pre-signed URL is communicated to the various stakeholders of the customer.    
+
+#### Architecture Diagram
+
+![Screenshot](images/Scheduled-VDM-stats-export.png)
+
+#### Use-Case
+
+* Extracting email email statics per identity, configuration set and ISP. 
+* Easy to calculate and understand tenant specific email usage.
+* Figuring out the reputation from the tenant email sending stats
+
+#### AWS CloudFormation Link
+[CF Template](cloudformation/SES_Scheduled_Export_VDM_Report.yaml)
+
+#### Documentation References
+
+* [Virtual delvierability manager](https://docs.aws.amazon.com/ses/latest/dg/vdm.html)
+* [Virtual delvierability manager Export stat api](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_CreateExportJob.html)
+
+-----
 
 ## Amazon Pinpoint Basics
 

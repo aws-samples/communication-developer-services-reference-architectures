@@ -1,0 +1,444 @@
+# author: satyaso@, @khokharn
+AWSTemplateFormatVersion: 2010-09-09
+Description:  Ap approach to export SES VDM report though a scheduled exporter emchanism 
+
+Transform: "AWS::LanguageExtensions"
+
+Parameters:
+
+  ScheduleRate:
+    Description: The rate at which report would be triggered. Possible values are "rate(value unit)", "cron(fields)" and "at(yyyy-mm-ddThh:mm:ss)" for one-time execution. Refer following for more details https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-scheduler-schedule.html#cfn-scheduler-schedule-scheduleexpression
+    Type: String
+    Default: rate(2 minutes)
+
+  EmailID:
+    Description: The email ID where VDM report export will be shared on schedule
+    Type: String
+    Default: <NA>
+
+  VDMReportDataFormat:
+    Description: The format expected for VDM report, valid values are JSON or CSV
+    Type: String
+    Default: JSON
+
+  VDMReportEndIdentifier:
+    Description: Whenever Scheduler is enabled, it will trigger as per ScheduleRate value and choose current wallclock as starting timestamp of your VDM query. VDMReportEndIdentifier parameter controls the ending timestamp of your VDM query. Valid values are 2 D | 5 M etc. Possible options are <Y year ; M month ; D day ; HH hour ; MM min ; SS second>
+    Type: String
+    Default: 30 D
+
+  VDMReportDimensions:
+    Description: Dimensions to filter VDM Report, valid values are EMAIL_IDENTITY | CONFIGURATION_SET | ISP
+    Type: String
+    Default: EMAIL_IDENTITY
+
+  VDMReportMetricsToExport:
+    Description: Metrics to export for VDM Report as per choosen Aggregation, valid values for metrics are SEND | COMPLAINT | PERMANENT_BOUNCE | TRANSIENT_BOUNCE | OPEN | CLICK | DELIVERY | DELIVERY_OPEN | DELIVERY_CLICK | DELIVERY_COMPLAINT and valid values for aggregation are VOLUME | RATE. To specify use comma-seprated <Metric,Aggregation,Metric,Aggregation> format
+    Type: CommaDelimitedList
+    Default: SEND,VOLUME,DELIVERY,RATE,TRANSIENT_BOUNCE,RATE,PERMANENT_BOUNCE,RATE,COMPLAINT,RATE,OPEN,RATE,CLICK,RATE,DELIVERY_OPEN,RATE,DELIVERY_CLICK,RATE,DELIVERY_COMPLAINT,RATE
+
+Resources:
+  
+  StateMachineDynamicTimeWindowLambdaIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      ManagedPolicyArns:
+        - !Join 
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Condition:
+              StringEquals: 
+                aws:SourceAccount: !Ref AWS::AccountId
+        Version: 2012-10-17
+
+  StateMachineDynamicTimeWindowLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - StateMachineDynamicTimeWindowLambdaIAMRole
+    Properties:
+      Code:
+        ZipFile: |
+            import json
+
+            from datetime import date, datetime
+            from dateutil.relativedelta import relativedelta
+
+            def lambda_handler(event, context):
+                
+                startDateString = event["ExportDataSource"]["MetricsDataSource"]["StartDate"]
+                startDate = datetime.strptime(startDateString, '%Y-%m-%dT%H:%M:%SZ')
+                
+                # SES V2 error : To get daily aggregated data you must not specify partial-day timestamps. Please make your interval go from midnight to midnight UTC.
+                startDate = startDate.replace(hour=0, minute=0, second=0)
+
+                '''
+                    expecting input as : 2 D
+                    
+                    Y year
+                    M month
+                    D day
+                    HH hour
+                    MM min
+                    SS second
+                '''
+                endIdentifier = event["ExportDataSource"]["MetricsDataSource"]["EndIdentifier"]
+                identifierArray = endIdentifier.split(" ")
+                increment = int(identifierArray[0])
+                unit = identifierArray[1]
+                
+                if unit == "Y":
+                    endDate = startDate - relativedelta(years=increment)
+                    
+                elif unit == "M":
+                    endDate = startDate - relativedelta(months=increment)
+                
+                elif unit == "D":
+                    endDate = startDate - relativedelta(days=increment)
+                    
+                elif unit == "HH":
+                    endDate = startDate - relativedelta(hours=increment)
+                
+                elif unit == "MM":
+                    endDate = startDate - relativedelta(minutes=increment)
+                
+                elif unit == "SS":
+                    endDate = startDate - relativedelta(seconds=increment)
+                
+                else:
+                    endDate = startDate
+                
+                endDateString = endDate.strftime('%Y-%m-%dT%H:%M:%SZ')
+                startDateString = startDate.strftime('%Y-%m-%dT%H:%M:%SZ')
+                
+                print (startDateString)
+                print (endDateString)
+
+                del event["ExportDataSource"]["MetricsDataSource"]["EndIdentifier"]
+                event["ExportDataSource"]["MetricsDataSource"]["EndDate"] = startDateString
+                event["ExportDataSource"]["MetricsDataSource"]["StartDate"] =  endDateString
+                
+                print(json.dumps(event))
+                
+                return event
+      FunctionName: !Join
+      - "-"
+      - - "state_machine_dynamic_time_window_lambda"
+        - !Select
+          - 0
+          - !Split
+            - "-"
+            - !Select
+              - 2
+              - !Split
+                - "/"
+                - !Ref "AWS::StackId"
+      MemorySize: 128
+      Runtime: python3.12
+      Description: Helper Lambda function that executes during stack creation and provides incrmeental time filters for ses vdm export job dynamically 
+      Handler: index.lambda_handler
+      Role: !GetAtt StateMachineDynamicTimeWindowLambdaIAMRole.Arn
+      Timeout: 900   
+
+  SNSToSendVDMExportStats:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Join
+          - "_"
+          - - "send_vdm_export_stats"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+      Subscription:
+        - Endpoint: !Ref EmailID
+          Protocol: email
+
+  StateMachineIAMRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        AssumeRolePolicyDocument:
+          Statement:
+            - Action: 'sts:AssumeRole'
+              Effect: Allow
+              Principal:
+                Service: states.amazonaws.com
+          Version: 2012-10-17
+    
+  StateMachineIAMPolicy:
+      Type: 'AWS::IAM::Policy'
+      DependsOn:
+        - StateMachineIAMRole
+      Properties:
+        PolicyDocument:
+          Statement:
+            - Action:
+                - 'lambda:InvokeFunction'
+              Effect: Allow
+              Resource:
+                - !Join
+                  - ''
+                  - - 'arn:aws:lambda:'
+                    - !Ref AWS::Region
+                    - ':'
+                    - !Ref AWS::AccountId
+                    - ':function:'
+                    - !Ref StateMachineDynamicTimeWindowLambda 
+            - Action:
+                - 'ses:GetExportJob'
+                - 'ses:CreateExportJob'
+              Effect: Allow
+              Resource:
+                - '*'
+            - Action:
+                - 'sns:Publish'
+              Effect: Allow
+              Resource: !Ref SNSToSendVDMExportStats
+          Version: 2012-10-17
+        PolicyName: !Join
+          - "_"
+          - - "policy_for_state_machine_role"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+        Roles:
+          - !Ref StateMachineIAMRole
+
+  StateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+        - StateMachineIAMRole
+        - SNSToSendVDMExportStats
+        - StateMachineDynamicTimeWindowLambda
+    Properties:
+      Definition: 
+        Comment: A description of my state machine
+        StartAt: Lambda Invoke
+        States:
+          Lambda Invoke:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: "$.Payload"
+            Parameters:
+              Payload.$: "$"
+              FunctionName: !Ref StateMachineDynamicTimeWindowLambda
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              - Lambda.TooManyRequestsException
+              IntervalSeconds: 1
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: CreateExportJob
+          CreateExportJob:
+            Type: Task
+            Parameters:
+              ExportDataSource:
+                MetricsDataSource:
+                  Namespace.$: "$.ExportDataSource.MetricsDataSource.Namespace"
+                  StartDate.$: "$.ExportDataSource.MetricsDataSource.StartDate"
+                  EndDate.$: "$.ExportDataSource.MetricsDataSource.EndDate"
+                  Dimensions:
+                    EMAIL_IDENTITY.$: "$.ExportDataSource.MetricsDataSource.Dimensions.EMAIL_IDENTITY"
+                  Metrics.$: "$.ExportDataSource.MetricsDataSource.Metrics"
+              ExportDestination:
+                DataFormat.$: "$.ExportDestination.DataFormat"
+            Resource: arn:aws:states:::aws-sdk:sesv2:createExportJob
+            Next: GetExportJob
+          GetExportJob:
+            Type: Task
+            Parameters:
+              JobId.$: "$.JobId"
+            Resource: arn:aws:states:::aws-sdk:sesv2:getExportJob
+            Next: Choice
+          Choice:
+            Type: Choice
+            Choices:
+            - Variable: "$.JobStatus"
+              StringEquals: COMPLETED
+              Next: SNS Publish
+            - Or:
+              - Variable: "$.JobStatus"
+                StringEquals: FAILED
+              - Variable: "$.JobStatus"
+                StringEquals: CANCELLED
+              Next: SNS Publish (1)
+            Default: Wait
+          SNS Publish:
+            Type: Task
+            Resource: arn:aws:states:::aws-sdk:sns:publish
+            Parameters:
+              TopicArn: !Ref SNSToSendVDMExportStats
+              Subject: SES V2 SDM report
+              Message:
+                StartDate.$: "$.ExportDataSource.MetricsDataSource.StartDate"
+                EndDate.$: "$.ExportDataSource.MetricsDataSource.EndDate"
+                S3Url.$: "$.ExportDestination.S3Url"
+                JobId.$: "$.JobId"
+            End: true
+          Wait:
+            Type: Wait
+            Seconds: 30
+            Next: GetExportJob
+          SNS Publish (1):
+            Type: Task
+            Resource: arn:aws:states:::sns:publish
+            Parameters:
+              Message.$: "$"
+              TopicArn: !Ref SNSToSendVDMExportStats
+            End: true
+      RoleArn: !Join
+          - ''
+          - - 'arn:aws:iam::'
+            - !Ref AWS::AccountId
+            - ':role/'
+            - !Ref StateMachineIAMRole 
+      StateMachineName: !Join
+          - "_"
+          - - "ses_vdm"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+      StateMachineType: "STANDARD"
+      
+  SchedulerIAMRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        AssumeRolePolicyDocument:
+          Statement:
+            - Action: 'sts:AssumeRole'
+              Effect: Allow
+              Principal:
+                Service: scheduler.amazonaws.com
+              Condition:
+                StringEquals: 
+                  aws:SourceAccount: !Ref AWS::AccountId
+          Version: 2012-10-17
+
+  SchedulerIAMPolicy:
+      Type: 'AWS::IAM::Policy'
+      DependsOn:
+        - SchedulerIAMRole
+        - StateMachine
+      Properties:
+        PolicyDocument:
+          Statement:
+            - Action:
+                - 'states:StartExecution'
+              Effect: Allow
+              Resource:
+                - !Ref StateMachine
+          Version: 2012-10-17
+        PolicyName: !Join
+          - "_"
+          - - "policy_for_scheduler_role"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+        Roles:
+          - !Ref SchedulerIAMRole
+
+  Scheduler:
+    Type: AWS::Scheduler::Schedule
+    DependsOn:
+      - SchedulerIAMRole
+      - StateMachine
+    Properties:
+      Name: !Join
+        - "_"
+        - - "trigger_stepfn_for_ses_export_cfn"
+          - !Select
+            - 0
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - "/"
+                  - !Ref "AWS::StackId"
+      FlexibleTimeWindow: 
+        Mode : "OFF"
+      ScheduleExpression: !Ref ScheduleRate
+      State: "DISABLED"
+      Target: 
+        Arn: !Ref StateMachine
+        Input: 
+          Fn::ToJsonString:
+            ExportDestination:
+              DataFormat: !Ref VDMReportDataFormat
+            ExportDataSource:
+              MetricsDataSource:
+                Namespace: "VDM"
+                StartDate: "<aws.scheduler.scheduled-time>"
+                EndIdentifier: !Ref VDMReportEndIdentifier
+                Dimensions: 
+                  EMAIL_IDENTITY :
+                    - "*"
+                Metrics:
+                  - Name: !Select [ "0", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "1", !Ref VDMReportMetricsToExport  ]
+
+                  - Name: !Select [ "2", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "3", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "4", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "5", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "6", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "7", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "8", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "9", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "10", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "11", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "12", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "13", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "14", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "15", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "16", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "17", !Ref VDMReportMetricsToExport  ]
+                  
+                  - Name: !Select [ "18", !Ref VDMReportMetricsToExport  ]
+                    Aggregation: !Select [ "19", !Ref VDMReportMetricsToExport  ]
+
+        RoleArn: !Join
+          - ''
+          - - 'arn:aws:iam::'
+            - !Ref AWS::AccountId
+            - ':role/'
+            - !Ref SchedulerIAMRole 
