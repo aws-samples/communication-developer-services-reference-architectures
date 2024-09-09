@@ -125,8 +125,8 @@ Using the architecture that is presented below, it is possible to implement a te
 
 #### Documentation References
 
-* [Virtual delvierability manager](https://docs.aws.amazon.com/ses/latest/dg/vdm.html)
-* [Virtual delvierability manager Export stat api](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_CreateExportJob.html)
+* [SES Virtual deliverability manager](https://docs.aws.amazon.com/ses/latest/dg/vdm.html)
+* [SES Virtual deliverability manager export stat api](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_CreateExportJob.html)
 
 -----
 
