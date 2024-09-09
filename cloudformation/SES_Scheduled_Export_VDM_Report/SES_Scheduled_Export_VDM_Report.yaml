@@ -1,6 +1,6 @@
 # author: satyaso@, @khokharn
 AWSTemplateFormatVersion: 2010-09-09
-Description:  Ap approach to export SES VDM report though a scheduled exporter emchanism 
+Description:  An approach to export SES VDM report though a scheduled exporter emchanism 
 
 Transform: "AWS::LanguageExtensions"
 
