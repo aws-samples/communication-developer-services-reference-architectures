@@ -20,7 +20,7 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Add / Remove from Segments via Event Activity](#add--remove-from-segments-via-event-activity)
   * [Simple CMS or Static Website Host](#simple-cms-or-static-website-host)
   * [Digital User Engagement Events Dashboard](#digital-user-engagement-events-dashboard)
-  * [Pinpoint / SES messages queuing](#pinpoint--ses-messages-queuing)
+  * [SES load testing & messages queuing](#ses-load-testing-&-messages-queuing)
   * [Pinpoint Journey Copying Mechanism](#Pinpoint-Journey-Copying-Mechanism)
 * [Amazon Pinpoint SMS](#user-content-amazon-pinpoint-sms)
   * [Self-Managed Opt Outs](#self-managed-opt-outs)
@@ -545,24 +545,27 @@ This Solution uses the Athena tables created by [Digital user engagement events 
 
 ------
 
-### Pinpoint / SES messages queuing
+### SES load testing & messages queuing
 
 #### Description
-Amazon SES and Amazon Pinpoint API operations for sending messages, don't have a queuing mechanism. If your application exceeds the allocated throughput limits (messages per second), then the API will return a throttling error message Maximum sending rate exceeded. 
+This solution is designed to assist Amazon SES (Simple Email Service) users in queuing and sending bulk emails while maintaining control over error handling, personalization, and throughput testing. It enables email performance monitoring by capturing and analyzing event data through Amazon Athena and CloudWatch. The solution deploys key AWS services using the AWS Cloud Development Kit (CDK).
 
-This solution takes advantages of an Amazon SQS Standard Queue and Lambda triggers ensuring that the allocated SES or Pinpoint throughput is being fully utilized while any throttling errors are being handled by writing the message back to the queue. The solution deploys an additional AWS Lambda function, which is invoked every minute by an EventBridge rule and writes an X number of messages defined by the user to the SQS Standard Queue. The messages written to the SQS Standard Queue are being send to an SES simulator address and all relevant metrics such as number of emails send, delivered, number of message written to the SQS etc. are reported on an Amazon Cloudwatch dashboard. Based on the Amazon Cloudwatch dashboard the user should configure the SQS batch and Lambda trigger concurrency so that the solution utilizes the full allocated throughput. Once the above have been configured the production application can write the messages directly to the SQS Standard Queue.
-
-This solution is written in Python and uses a CloudFormation Template. It is fully configured for SES and requires minimum amendments for Pinpoint.
+### Key Features:
+- **Queue Emails & Handle Errors**: Efficiently queue large numbers of emails and manage failures.
+- **Personalize Emails**: Dynamically generate emails using customer metadata stored in DynamoDB.
+- **Throughput Testing**: Simulate different levels of email traffic to assess performance.
+- **Analytics & Monitoring**: Capture email events and analyze them using Amazon Athena and monitor metrics in CloudWatch.
 
 #### Architecture Diagram
-![Screenshot](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/images/ArchDiagram.PNG)
+![SES-load-testing](https://github.com/aws-samples/load-testing-sample-amazon-ses/blob/main/architecture/architecture-diagram.PNG)
 
 #### Use case(s)
-  * Queue SES / Pinpoint messages and handle any throttling errors
+  * Queue SES messages and handle any throttling errors
+  * Perform SES load testing
   * Store messages that are not being send due to an error in a dead letter queue for later processing or analysis
 
 #### GitHub repository with detailed ReadMe and AWS CloudFormation template
-[GitHub repository](https://github.com/aws-samples/communication-developer-services-reference-architectures/blob/master/cloudformation/SES_Pinpoint_Messages_Queuing/SES_Pinpoint_Messages_Queuing.yaml)
+[GitHub repository](https://github.com/aws-samples/load-testing-sample-amazon-ses/tree/main)
 
 ------
 
