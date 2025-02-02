@@ -35,6 +35,12 @@ A repository of reference architectures for AWS Digital User Engagement services
   * [Amazon Pinpoint Campaings, Journeys, Segments DB](#amazon-pinpoint-campaigns-journeys-segments-db)
 * [Combining Multiple References Together](#Combining-Multiple-References-Together)   
   * [Triggered Imports, Phone Validate, Campaign Create](#Triggered-Imports-Phone-Validate-Campaign-Create)
+* AWS End User Messaging Social (WhatsApp) Basics
+  * [WhatsApp auto-reply]()
+  * [WhatsApp Integration with AWS End User Messaging and Amazon Bedrock](https://github.com/aws-samples/generative-ai-ml-latam-samples/tree/main/samples/end-user-messaging-bedrock)
+  * [Multi-channel chat with AI Agents and Q&A bots](https://github.com/aws-samples/Multi-channel-Chat-with-AI-Agents-and-Q-A-Bots)
+  * [Omni-channel fallback messaging](https://github.com/aws-samples/omnichannel-fallback-messaging)
+  * [Engagement Database and Analytics](https://github.com/aws-samples/Engagement-Database-And-Analytics-Sample-For-End-User-Messaging-And-SES)
 ------
 ## Amazon SES Basics
 
