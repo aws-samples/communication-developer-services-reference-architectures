@@ -27,3 +27,10 @@ file/
 **/.vscode
 
 images/Thumbs.db
+
+# Catalog tooling
+__pycache__/
+*.pyc
+.venv/
+scripts/metadata.json
+link-report.json

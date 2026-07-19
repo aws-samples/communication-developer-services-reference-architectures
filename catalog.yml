@@ -1,0 +1,656 @@
+# =============================================================================
+# CDS Reference Architectures catalog
+# =============================================================================
+# This file is the single source of truth. README.md is generated from it by
+# CI (scripts/generate_readme.py). DO NOT edit README.md by hand.
+#
+# To add an entry: copy the template below, fill it in, open a merge request.
+# CI validates the file and regenerates the README.
+#
+# -----------------------------------------------------------------------------
+# Entry template (copy from "# --- copy below ---" to "# --- copy above ---")
+# -----------------------------------------------------------------------------
+# --- copy below ---
+#   - title: Short human-readable name
+#     service: EUM            # one of: EUM | SES | MULTI   (see services: keys)
+#     status: mainline        # mainline | archived
+#     tags: [genai, whatsapp] # free-form, lowercase; used for filtering/scanning
+#     url: https://github.com/aws-samples/your-repo
+#     desc: One sentence, no trailing period needed, describing what it does.
+# --- copy above ---
+#
+# Field rules (enforced by CI):
+#   title    required, unique
+#   service  required, must be a key in `services` below
+#   status   required, mainline or archived
+#   tags     optional list of lowercase strings
+#   url       required, http(s)
+#   desc     required, single line
+# =============================================================================
+
+# Service groupings. The `label` is the section heading in the README.
+# `order` controls section order (lower first). Add new services here.
+services:
+  EUM:
+    label: AWS End User Messaging
+    order: 1
+    blurb: >-
+      WhatsApp, SMS, push and social messaging built on AWS End User Messaging.
+      These are the actively maintained, recommended patterns.
+  SES:
+    label: Amazon Simple Email Service (SES)
+    order: 2
+    blurb: >-
+      Email sending, receiving, event processing and analytics with Amazon SES.
+  MULTI:
+    label: Multi-channel / Combined
+    order: 3
+    blurb: >-
+      Patterns that combine more than one channel or chain several references
+      together.
+  PINPOINT:
+    label: Amazon Pinpoint (Archived)
+    order: 99
+    blurb: >-
+      Amazon Pinpoint patterns retained for reference. Pinpoint is on a
+      deprecation path; prefer AWS End User Messaging and SES for new work.
+      These entries are kept so existing links and historical references do not
+      break.
+
+# -----------------------------------------------------------------------------
+# Entries
+# -----------------------------------------------------------------------------
+entries:
+
+  # ===== AWS End User Messaging (mainline) ====================================
+  - title: WhatsApp Auto-Reply
+    service: EUM
+    status: mainline
+    tags: [whatsapp, serverless]
+    url: https://github.com/aws-samples/communication-developer-services-reference-architectures
+    desc: Automatically respond to inbound WhatsApp messages using AWS End User Messaging Social
+
+  - title: WhatsApp Integration with AWS End User Messaging and Amazon Bedrock
+    service: EUM
+    status: mainline
+    tags: [whatsapp, genai, bedrock]
+    url: https://github.com/aws-samples/communication-developer-services-reference-architectures
+    desc: Power conversational WhatsApp experiences with generative AI through Amazon Bedrock
+
+  - title: Chat Orchestrator for Generative AI Conversations
+    service: EUM
+    status: mainline
+    tags: [genai, chat, multichannel, agents, bedrock]
+    url: https://github.com/aws-samples/sample-chat-orchestrator-for-generative-ai-conversations
+    desc: Route conversations across channels to generative AI agents and Q&A bots (the communications hub)
+
+  - title: Omni-channel Fallback Messaging
+    service: EUM
+    status: mainline
+    tags: [multichannel, sms, fallback, email, whatsapp]
+    url: https://github.com/aws-samples/omnichannel-fallback-messaging
+    desc: Fall back across channels (WhatsApp, SMS, email) when a message is not delivered
+
+  - title: Omni-channel Fallback Messaging with LINE
+    service: EUM
+    status: mainline
+    tags: [multichannel, sms, fallback, line]
+    url: https://github.com/aws-samples/sample-omnichannel-fallback-messaging-with-line
+    desc: Add LINE Messenger to the omni-channel fallback solution
+
+  - title: Multi-channel Messaging API with Templates
+    service: EUM
+    status: mainline
+    tags: [api, multichannel, templates, sms, email]
+    url: https://github.com/aws-samples/sample-multichannel-messaging-api-with-template
+    desc: A templated multi-channel messaging API sending SMS and email through EUM and SES
+
+  - title: Bulk SMS and Scheduling
+    service: EUM
+    status: mainline
+    tags: [sms, bulk, scheduling]
+    url: https://github.com/aws-samples/sample-bulk-sms-and-scheduling
+    desc: Send and schedule bulk SMS with AWS End User Messaging
+
+  - title: SMS 10DLC Registration Automation
+    service: EUM
+    status: mainline
+    tags: [sms, 10dlc, registration, automation]
+    url: https://github.com/aws-samples/sample-sms-10dlc-registration-automation
+    desc: Automate 10DLC brand and campaign registration for SMS
+
+  - title: Engagement Database and Analytics
+    service: EUM
+    status: mainline
+    tags: [analytics, data-lake, database]
+    url: https://github.com/aws-samples/Engagement-Database-And-Analytics-Sample-For-End-User-Messaging-And-SES
+    desc: Capture End User Messaging and SES engagement events into a queryable database for analytics
+
+  - title: WhatsApp Business with Amazon Connect Chat
+    service: EUM
+    status: mainline
+    tags: [whatsapp, amazon-connect, chat, cdk]
+    url: https://github.com/aws-samples/sample-whatsapp-end-user-messaging-connect-chat
+    desc: Integrate WhatsApp Business with Amazon Connect using AWS End User Messaging
+
+  - title: WhatsApp Operational Analytics
+    service: EUM
+    status: mainline
+    tags: [whatsapp, analytics]
+    url: https://github.com/aws-samples/sample-whatsapp-operational-analytics
+    desc: Capture and analyze operational metrics for WhatsApp messaging on End User Messaging
+
+  - title: WhatsApp Voice-to-Voice Messaging
+    service: EUM
+    status: mainline
+    tags: [whatsapp, voice, genai]
+    url: https://github.com/aws-samples/sample-whatsapp-voice-to-voice-messaging
+    desc: Build a voice-to-voice WhatsApp experience with AWS End User Messaging
+
+  - title: REST Frontend for End User Messaging
+    service: EUM
+    status: mainline
+    tags: [api, rest, frontend]
+    url: https://github.com/aws-samples/sample-rest-frontend-for-end-user-messaging
+    desc: A REST API frontend for sending messages through AWS End User Messaging
+
+  - title: End User Messaging Social Automation
+    service: EUM
+    status: mainline
+    tags: [social, whatsapp, automation]
+    url: https://github.com/aws-samples/aws-end-user-messaging-social-automation
+    desc: Automate AWS End User Messaging Social (WhatsApp) provisioning and workflows
+
+  - title: Conversational Commerce with OpenClaw and EUM
+    service: EUM
+    status: mainline
+    tags: [whatsapp, genai, agents, bedrock, commerce, openclaw]
+    url: https://github.com/aws-samples/sample-conversational-commerce-openclaw-eum
+    desc: Multi-channel conversational commerce on WhatsApp with AI agents (Bedrock AgentCore and OpenClaw) and a web storefront
+
+  - title: SNS SMS Detailed Monitoring Dashboard
+    service: EUM
+    status: mainline
+    tags: [sms, monitoring, dashboard, sns]
+    url: https://github.com/aws-samples/amazon-sns-sms-detailed-monitoring-dashboard
+    desc: Build a detailed monitoring dashboard for SMS sent through Amazon SNS
+
+  - title: Global SMS Planning Sheet
+    service: EUM
+    status: mainline
+    tags: [sms, global, planning, reference]
+    url: legacy/examples/Global%20SMS%20Planning%20Sheet-Public.xlsx
+    desc: A worksheet for planning global SMS rollouts across countries and use cases
+
+  - title: Notify Advanced Countries List
+    service: EUM
+    status: mainline
+    tags: [sms, global, reference]
+    url: legacy/examples/notify-advanced-countries.csv
+    desc: Reference list of countries with advanced SMS notification requirements
+
+  # ===== Amazon SES (mainline) ================================================
+  - title: GenAI Email Categorization with SES Mail Manager
+    service: SES
+    status: mainline
+    tags: [mail-manager, genai, bedrock, inbound]
+    url: https://github.com/aws-samples/sample-gen-ai-email-categorization-using-ses-mail-manager
+    desc: Classify and organize inbound email using generative AI with SES Mail Manager
+
+  - title: Two-Way Email to SMS with SES
+    service: SES
+    status: mainline
+    tags: [mail-manager, sms, inbound, two-way]
+    url: https://github.com/aws-samples/two-way-email-to-sms-with-ses
+    desc: Bridge email and SMS in both directions using Amazon SES
+
+  - title: Mass Email System
+    service: SES
+    status: mainline
+    tags: [bulk, serverless, throughput]
+    url: https://github.com/aws-samples/sample-mass-email-system
+    desc: A serverless mass email solution built on Amazon SES
+
+  - title: SES Event Processing
+    service: SES
+    status: mainline
+    tags: [events, reputation, bounces, complaints]
+    url: legacy/LEGACY_README.md#ses-event-processing
+    desc: Process bounces and complaints to protect your sending reputation
+
+  - title: SES Auto Reply
+    service: SES
+    status: mainline
+    tags: [inbound, templates, serverless]
+    url: legacy/LEGACY_README.md#ses-auto-reply
+    desc: Send a templated automatic response for non-monitored inbound email addresses
+
+  - title: SES VDM Stat Export
+    service: SES
+    status: mainline
+    tags: [vdm, analytics, billing]
+    url: legacy/LEGACY_README.md#ses-vdm-stat-export
+    desc: Export monthly Virtual Deliverability Manager data for validation and billing
+
+  - title: SES Email S3 Event Database
+    service: SES
+    status: mainline
+    tags: [events, data-lake, athena, s3]
+    url: legacy/LEGACY_README.md#ses-email-s3-event-database
+    desc: Archive SES email events to S3 and query them with Amazon Athena
+
+  - title: SES Load Testing and Message Queuing
+    service: SES
+    status: mainline
+    tags: [load-testing, queuing, throughput]
+    url: https://github.com/aws-samples/load-testing-sample-amazon-ses
+    desc: Queue bulk email while managing errors and testing sending throughput
+
+  - title: SES Campaign Manager
+    service: SES
+    status: mainline
+    tags: [campaigns, bulk, serverless]
+    url: https://github.com/aws-samples/sample-amazon-ses-campaign-manager
+    desc: Create and manage email campaigns on top of Amazon SES
+
+  - title: Priority Mailer CDK Solution
+    service: SES
+    status: mainline
+    tags: [cdk, priority, throughput]
+    url: https://github.com/aws-samples/sample-priority-mailer-cdk-solution-using-amazon-ses
+    desc: A CDK solution that sends email through Amazon SES with priority-based routing
+
+  - title: Amazon SES for MCP
+    service: SES
+    status: mainline
+    tags: [mcp, genai, agents]
+    url: https://github.com/aws-samples/sample-for-amazon-ses-mcp
+    desc: An MCP server that lets AI agents send email through Amazon SES
+
+  - title: SES Bounce and Complaint Dashboard
+    service: SES
+    status: mainline
+    tags: [bounces, complaints, dashboard, reputation]
+    url: https://github.com/aws-samples/amazon-ses-bounce-dashboard
+    desc: Retrieve bounces and complaints from Amazon SES and display them on a dashboard
+
+  - title: SES Event Data Dashboard and Analysis
+    service: SES
+    status: archived
+    tags: [events, analytics, dashboard]
+    url: https://github.com/aws-samples/amazon-ses-event-data-dashboard-analysis
+    desc: Analyze and visualize Amazon SES event data (repo archived on GitHub)
+
+  - title: Pinpoint to SES Email Template Migrator
+    service: SES
+    status: mainline
+    tags: [migration, templates, pinpoint]
+    url: https://github.com/aws-samples/sample-amazon-pinpoint-to-ses-email-template-migrator
+    desc: Migrate email templates from Amazon Pinpoint to Amazon SES
+
+  # ===== Multi-channel / Combined (mainline) ==================================
+  - title: Simple CMS or Static Website Host
+    service: MULTI
+    status: mainline
+    tags: [cloudfront, s3, hosting, images]
+    url: legacy/LEGACY_README.md#simple-cms-or-static-website-host
+    desc: Host images and attachments from an S3 bucket behind Amazon CloudFront
+
+  # ===== Amazon Pinpoint (archived) ===========================================
+  - title: Amazon S3 Triggered Endpoint Imports
+    service: PINPOINT
+    status: archived
+    tags: [s3, imports, endpoints]
+    url: legacy/LEGACY_README.md#amazon-s3-triggered-endpoint-imports
+    desc: Trigger batch endpoint imports automatically when files arrive in S3
+
+  - title: Automatic Phone Number Validate
+    service: PINPOINT
+    status: archived
+    tags: [phone-validate, endpoints]
+    url: legacy/LEGACY_README.md#automatic-phone-number-validate
+    desc: Validate phone numbers and enrich endpoint attributes automatically
+
+  - title: Automatic Amazon Pinpoint Campaign Creation
+    service: PINPOINT
+    status: archived
+    tags: [campaigns, sns, automation]
+    url: legacy/LEGACY_README.md#automatic-amazon-pinpoint-campaign-creation
+    desc: Programmatically create and execute campaigns with SNS notifications
+
+  - title: Pinpoint Event Processing
+    service: PINPOINT
+    status: archived
+    tags: [events, reputation]
+    url: legacy/LEGACY_README.md#pinpoint-event-processing
+    desc: Route engagement events to help maintain sending reputation
+
+  - title: Pinpoint S3 Event Database
+    service: PINPOINT
+    status: archived
+    tags: [events, data-lake, s3]
+    url: legacy/LEGACY_README.md#pinpoint-s3-event-database
+    desc: Stream Pinpoint events to S3 to build a data lake for analysis and ML
+
+  - title: Pinpoint SMS S3 Event Database
+    service: PINPOINT
+    status: archived
+    tags: [sms, events, kinesis-firehose, s3]
+    url: legacy/LEGACY_README.md#pinpoint-sms-s3-event-database
+    desc: Stream SMS engagement events to S3 through Kinesis Data Firehose
+
+  - title: Pinpoint Message Archiver
+    service: PINPOINT
+    status: archived
+    tags: [compliance, archiving]
+    url: legacy/LEGACY_README.md#pinpoint-message-archiver
+    desc: Re-render and store sent messages for compliance retention
+
+  - title: Add / Remove from Segments via Event Activity
+    service: PINPOINT
+    status: archived
+    tags: [segments, events, automation]
+    url: legacy/LEGACY_README.md#add--remove-from-segments-via-event-activity
+    desc: Update endpoint attributes from engagement events for dynamic segmentation
+
+  - title: Digital User Engagement Events Dashboard
+    service: PINPOINT
+    status: archived
+    tags: [quicksight, dashboard, analytics]
+    url: legacy/LEGACY_README.md#digital-user-engagement-events-dashboard
+    desc: Build QuickSight dashboards from Pinpoint and SES event data
+
+  - title: Pinpoint Journey Copying Mechanism
+    service: PINPOINT
+    status: archived
+    tags: [journeys, automation]
+    url: legacy/LEGACY_README.md#pinpoint-journey-copying-mechanism
+    desc: Copy journeys from one Amazon Pinpoint project to another
+
+  - title: Self-Managed Opt Outs
+    service: PINPOINT
+    status: archived
+    tags: [sms, opt-out, compliance]
+    url: legacy/LEGACY_README.md#self-managed-opt-outs
+    desc: Handle STOP keyword compliance while allowing transactional exceptions
+
+  - title: Sending SMS Triggered by S3 File Drop
+    service: PINPOINT
+    status: archived
+    tags: [sms, s3, automation]
+    url: legacy/LEGACY_README.md#sending-sms-triggered-by-s3-file-drop
+    desc: Trigger SMS sends from a CSV or JSON file uploaded to S3
+
+  - title: SMS Retry for Failed Deliveries
+    service: PINPOINT
+    status: archived
+    tags: [sms, retry]
+    url: legacy/LEGACY_README.md#sms-retry-for-failed-deliveries
+    desc: Retry transactional SMS messages that fail to deliver
+
+  - title: Federated Segmentation with Amazon Athena
+    service: PINPOINT
+    status: archived
+    tags: [segments, athena, data-lake]
+    url: legacy/LEGACY_README.md#federated-segmentation-with-amazon-athena
+    desc: Build advanced segments with Athena queries against external data lakes
+
+  - title: Send-Time Amazon Pinpoint Campaign Attributes
+    service: PINPOINT
+    status: archived
+    tags: [campaigns, personalization, lambda]
+    url: legacy/LEGACY_README.md#send-time-amazon-pinpoint-campaign-attributes
+    desc: Retrieve personalized data at campaign execution through Lambda hooks
+
+  - title: External Amazon Pinpoint Campaign Templates
+    service: PINPOINT
+    status: archived
+    tags: [campaigns, templates, lambda]
+    url: legacy/LEGACY_README.md#external-amazon-pinpoint-campaign-templates
+    desc: Fetch HTML and subject lines from external systems at send time
+
+  - title: Custom Channel (Connect, WhatsApp, social, anything)
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, connect, lambda]
+    url: legacy/LEGACY_README.md#connect-or-facebook-whatsapp-twitter-anything-as-a-pinpoint-campaign-channel
+    desc: Add a custom outbound channel through Lambda for calls, social and more
+
+  - title: Amazon Pinpoint Email Attachments with Custom Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, attachments, journeys]
+    url: legacy/LEGACY_README.md#amazon-pinpoint-email-attachments-with-custom-channel
+    desc: Support attachments in journeys through a custom channel Lambda
+
+  - title: Pinpoint Campaigns, Journeys, Segments DB
+    service: PINPOINT
+    status: archived
+    tags: [reporting, dynamodb]
+    url: legacy/LEGACY_README.md#amazon-pinpoint-campaigns-journeys-segments-db
+    desc: Map campaign, journey and segment IDs to names in DynamoDB for reporting
+
+  - title: Triggered Imports, Phone Validate, Campaign Create
+    service: PINPOINT
+    status: archived
+    tags: [combined, imports, campaigns, pipeline]
+    url: legacy/LEGACY_README.md#triggered-imports-phone-validate-campaign-create
+    desc: Chain three references into an end-to-end import and campaign pipeline
+
+  - title: Amazon Pinpoint WhatsApp Channel
+    service: PINPOINT
+    status: archived
+    tags: [whatsapp, custom-channel]
+    url: https://github.com/aws-samples/amazon-pinpoint-whatsapp
+    desc: Send WhatsApp messages through Amazon Pinpoint with a custom channel (use End User Messaging for new work)
+
+  # --- Standalone Pinpoint sample repos (archived on GitHub, kept as legacy) ---
+  - title: Pinpoint Two-Way SMS with Lex Bot
+    service: PINPOINT
+    status: archived
+    tags: [sms, two-way, lex, chatbot]
+    url: https://github.com/aws-samples/amazon-pinpoint-lex-bot
+    desc: Let customers have two-way SMS chats with an Amazon Lex bot through Pinpoint and Lambda
+
+  - title: Pinpoint Connect Callback Requestor
+    service: PINPOINT
+    status: archived
+    tags: [sms, voice, amazon-connect, callback]
+    url: https://github.com/aws-samples/amazon-pinpoint-connect-callback-requestor
+    desc: Put customers into an Amazon Connect phone callback queue from an inbound SMS request
+
+  - title: Pinpoint Facebook Ads Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, facebook, ads]
+    url: https://github.com/aws-samples/amazon-pinpoint-facebookads-channel
+    desc: Custom Pinpoint channel that integrates with Facebook Ads
+
+  - title: Pinpoint URL Shortener
+    service: PINPOINT
+    status: archived
+    tags: [sms, url-shortener, links]
+    url: https://github.com/aws-samples/amazon-pinpoint-urlshortener
+    desc: Shorten links in Pinpoint messages with a serverless URL shortener
+
+  - title: Pinpoint Interactive Multilingual SMS
+    service: PINPOINT
+    status: archived
+    tags: [sms, two-way, multilingual]
+    url: https://github.com/aws-samples/amazon-pinpoint-interactive-sms-multilingual
+    desc: An interactive multilingual two-way SMS workflow for updating member information
+
+  - title: Pinpoint Manage Email Unsubscribes
+    service: PINPOINT
+    status: archived
+    tags: [email, opt-out, unsubscribe]
+    url: https://github.com/aws-samples/amazon-pinpoint-manage-email-unsubscribes
+    desc: Manage email unsubscribe requests and opt-out state for Amazon Pinpoint
+
+  - title: Pinpoint Real-Time Campaign Optimization
+    service: PINPOINT
+    status: archived
+    tags: [campaigns, optimization, ml]
+    url: https://github.com/aws-samples/amazon-pinpoint-realtime-campaign-optimization-example
+    desc: Example of optimizing Pinpoint campaigns in real time
+
+  - title: Pinpoint OTP with API Gateway
+    service: PINPOINT
+    status: archived
+    tags: [otp, authentication, api-gateway, sms]
+    url: https://github.com/aws-samples/amazon-api-gateway-pinpoint-otp-demo
+    desc: Authenticate users with Amazon Pinpoint one-time passwords behind API Gateway
+
+  - title: Pinpoint LINE Messaging API Integration
+    service: PINPOINT
+    status: archived
+    tags: [line, custom-channel]
+    url: https://github.com/aws-samples/amazon-pinpoint-integration-line-messaging-api
+    desc: Integrate the LINE Messaging API with Amazon Pinpoint
+
+  - title: Pinpoint IFTTT Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, ifttt]
+    url: https://github.com/aws-samples/amazon-pinpoint-ifttt-channel
+    desc: Custom Pinpoint channel that triggers IFTTT applets
+
+  - title: Pinpoint Two-Way SMS
+    service: PINPOINT
+    status: archived
+    tags: [sms, two-way]
+    url: https://github.com/aws-samples/pinpoint-two-way-sms
+    desc: Handle inbound and outbound two-way SMS with Amazon Pinpoint
+
+  - title: Pinpoint Shift Management Two-Way SMS
+    service: PINPOINT
+    status: archived
+    tags: [sms, two-way, scheduling]
+    url: https://github.com/aws-samples/pinpoint-shift-management-2-way-sms
+    desc: A shift-management workflow driven by two-way SMS on Amazon Pinpoint
+
+  - title: Pinpoint Call Retry
+    service: PINPOINT
+    status: archived
+    tags: [voice, retry]
+    url: https://github.com/aws-samples/amazon-pinpoint-call-retry
+    desc: Retry failed outbound voice calls sent through Amazon Pinpoint
+
+  - title: Pinpoint Incident Notifications Mechanism
+    service: PINPOINT
+    status: archived
+    tags: [notifications, incidents, automation]
+    url: https://github.com/aws-samples/amazon-pinpoint-incident-notifications-mechanism
+    desc: Send incident notifications to on-call staff through Amazon Pinpoint
+
+  - title: Multi-language Notifications with Amazon Translate and Pinpoint
+    service: PINPOINT
+    status: archived
+    tags: [notifications, multilingual, translate, serverless]
+    url: https://github.com/aws-samples/multi-language-notification-with-amazon-translate-amazon-pinpoint
+    desc: Build multilingual notifications with Amazon Translate and Amazon Pinpoint
+
+  - title: Pinpoint RDS Integration
+    service: PINPOINT
+    status: archived
+    tags: [rds, opt-in, channels]
+    url: https://github.com/aws-samples/amazon-pinpoint-rds-integration
+    desc: Update opt-in status for Pinpoint channels from data in Amazon RDS
+
+  - title: Pinpoint Segment and Campaign Automation
+    service: PINPOINT
+    status: archived
+    tags: [segments, campaigns, automation]
+    url: https://github.com/aws-samples/amazon-pinpoint-segment-campaign-automation
+    desc: Automate segment and campaign creation in Amazon Pinpoint
+
+  - title: Pinpoint Voice Channel
+    service: PINPOINT
+    status: archived
+    tags: [voice, custom-channel]
+    url: https://github.com/aws-samples/amazon-pinpoint-voice-channel
+    desc: Send voice messages through an Amazon Pinpoint custom channel
+
+  - title: Pinpoint Salesforce Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, salesforce]
+    url: https://github.com/aws-samples/amazon-pinpoint-salesforce-channel
+    desc: Custom Pinpoint channel that integrates with Salesforce
+
+  - title: Pinpoint Call Generator
+    service: PINPOINT
+    status: archived
+    tags: [voice, lambda]
+    url: https://github.com/aws-samples/amazon-pinpoint-call-generator
+    desc: Trigger outbound voice phone calls with Amazon Pinpoint and Lambda
+
+  - title: Pinpoint Twitter Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, twitter, social]
+    url: https://github.com/aws-samples/amazon-pinpoint-twitter-channel
+    desc: Custom Pinpoint channel that sends messages through Twitter
+
+  - title: Pinpoint Slack Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, slack]
+    url: https://github.com/aws-samples/amazon-pinpoint-slack-channel
+    desc: Custom Pinpoint channel that sends messages to Slack
+
+  - title: Pinpoint Connect Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, amazon-connect, voice]
+    url: https://github.com/aws-samples/amazon-pinpoint-connect-channel
+    desc: Custom Pinpoint channel that places outbound calls through Amazon Connect
+
+  - title: Pinpoint Google Ads Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, google-ads, ads]
+    url: https://github.com/aws-samples/amazon-pinpoint-googleads-channel
+    desc: Custom Pinpoint channel that integrates with Google Ads
+
+  - title: Pinpoint WeChat Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, wechat, social]
+    url: https://github.com/aws-samples/amazon-pinpoint-wechat-channel
+    desc: Custom Pinpoint channel that sends messages through WeChat
+
+  - title: Pinpoint DynamoDB Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, dynamodb]
+    url: https://github.com/aws-samples/amazon-pinpoint-dynamodb-channel
+    desc: Custom Pinpoint channel that writes message payloads to DynamoDB
+
+  - title: Pinpoint Update Endpoint Channel
+    service: PINPOINT
+    status: archived
+    tags: [custom-channel, endpoints]
+    url: https://github.com/aws-samples/amazon-pinpoint-updateendpoint-channel
+    desc: Custom Pinpoint channel that updates endpoint attributes at send time
+
+  - title: Real-Time Notifications with Amazon Pinpoint
+    service: PINPOINT
+    status: archived
+    tags: [notifications, push, samples]
+    url: https://github.com/aws-samples/send-real-time-notification-using-amazon-pinpoint-samples
+    desc: Send real-time notifications to endpoints with Amazon Pinpoint
+
+  - title: Pinpoint Event Trigger Demo
+    service: PINPOINT
+    status: archived
+    tags: [events, endpoints, demo]
+    url: https://github.com/aws-samples/amazon-pinpoint-event-trigger-demo
+    desc: Register endpoints and generate events to demonstrate Pinpoint event triggers
+
+  - title: Multiple Accounts, Multiple Pinpoint Projects
+    service: PINPOINT
+    status: archived
+    tags: [cdk, multi-account, architecture]
+    url: https://github.com/aws-samples/multiple-accounts-multiple-amazon-pinpoint-projects
+    desc: A CDK example for running Pinpoint across multiple accounts and projects

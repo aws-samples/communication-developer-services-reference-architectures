@@ -1,61 +1,67 @@
-# Contributing Guidelines
+# Contributing
 
-Thank you for your interest in contributing to our project. Whether it's a bug report, new feature, correction, or additional
-documentation, we greatly value feedback and contributions from our community.
+This repo is an index of AWS End User Messaging, Amazon SES, and legacy Amazon
+Pinpoint samples. The goal is that every relevant sample is captured here as a
+reference link, organized so it is easy to find.
 
-Please read through this document before submitting any issues or pull requests to ensure we have all the necessary
-information to effectively respond to your bug report or contribution.
+## Suggest a sample
 
+Open an issue with the sample's URL, which service it relates to
+(EUM, SES, MULTI, or PINPOINT), and a one-line description. A maintainer adds
+it to the catalog. This works for anything public: an `aws-samples` repo,
+another GitHub org, a blog post, or a workshop.
 
-## Reporting Bugs/Feature Requests
+## Add an entry yourself
 
-We welcome you to use the GitHub issue tracker to report bugs or suggest features.
+The catalog lives in [`catalog.yml`](catalog.yml). The table in `README.md` is
+generated from it, so do not edit the README table by hand.
 
-When filing an issue, please check existing open, or recently closed, issues to make sure somebody else hasn't already
-reported the issue. Please try to include as much information as you can. Details like these are incredibly useful:
+1. Add an entry block to `catalog.yml` (template is at the top of the file):
 
-* A reproducible test case or series of steps
-* The version of our code being used
-* Any modifications you've made relevant to the bug
-* Anything unusual about your environment or deployment
+   ```yaml
+     - title: Short human-readable name
+       service: EUM            # EUM | SES | MULTI | PINPOINT
+       status: mainline        # mainline | archived
+       tags: [genai, whatsapp] # lowercase, reuse existing tags where you can
+       url: https://github.com/aws-samples/your-repo
+       desc: One sentence describing what it does
+   ```
 
+2. Regenerate the README:
 
-## Contributing via Pull Requests
-Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
+   ```bash
+   pip install pyyaml        # once
+   python3 scripts/generate_readme.py
+   ```
 
-1. You are working against the latest source on the *master* branch.
-2. You check existing open, and recently merged, pull requests to make sure someone else hasn't addressed the problem already.
-3. You open an issue to discuss any significant work - we would hate for your time to be wasted.
+3. Commit both `catalog.yml` and `README.md` and open a pull request.
 
-To send us a pull request, please:
+### Conventions
 
-1. Fork the repository.
-2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
-3. Ensure local tests pass.
-4. Commit to your fork using clear commit messages.
-5. Send us a pull request, answering any default questions in the pull request interface.
-6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
-
-GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
-[creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
-
-
-## Finding contributions to work on
-Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
-
+- `service`: `EUM` and `SES` are the actively maintained services. `MULTI` is
+  for samples that span channels. `PINPOINT` is legacy.
+- `status`: `mainline` for current EUM/SES work; `archived` for Pinpoint or any
+  repo that is archived or no longer recommended.
+- `tags`: lowercase, free-form. Reuse an existing tag from the README Tag index
+  before inventing a new one.
+- `desc`: one sentence, no trailing period.
+- `url`: the real live repo, or an in-repo `legacy/` path for the original
+  monorepo patterns (e.g. `legacy/LEGACY_README.md#ses-auto-reply`).
 
 ## Code of Conduct
+
 This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct).
 For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq) or contact
-opensource-codeofconduct@amazon.com with any additional questions or comments.
-
+opensource-codeofconduct@amazon.com with any questions or comments.
 
 ## Security issue notifications
-If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
 
+If you discover a potential security issue, notify AWS/Amazon Security via the
+[vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/).
+Do **not** create a public issue.
 
 ## Licensing
 
-See the [LICENSE](https://github.com/aws-samples/digital-user-engagement-reference-architectures/blob/master/LICSENSE.txt) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
-
-We may ask you to sign a [Contributor License Agreement (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement) for larger changes.
+See the [LICENSE](LICENSE) file. We may ask you to confirm the licensing of your
+contribution and, for larger changes, to sign a
+[Contributor License Agreement (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement).
