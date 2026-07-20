@@ -179,14 +179,14 @@ entries:
     service: EUM
     status: mainline
     tags: [sms, global, planning, reference]
-    url: legacy/examples/Global%20SMS%20Planning%20Sheet-Public.xlsx
+    url: examples/Global%20SMS%20Planning%20Sheet-Public.xlsx
     desc: A worksheet for planning global SMS rollouts across countries and use cases
 
   - title: Notify Advanced Countries List
     service: EUM
     status: mainline
     tags: [sms, global, reference]
-    url: legacy/examples/notify-advanced-countries.csv
+    url: examples/notify-advanced-countries.csv
     desc: Reference list of countries with advanced SMS notification requirements
 
   # ===== Amazon SES (mainline) ================================================

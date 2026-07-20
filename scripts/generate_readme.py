@@ -65,10 +65,10 @@ def validate(services, entries):
             fail(f"{where} ({title!r}) has invalid status {e['status']!r}; "
                  f"valid: {', '.join(sorted(VALID_STATUS))}")
         # Allow absolute http(s) links or in-repo relative links into legacy/
-        # (the preserved monorepo write-ups in legacy/LEGACY_README.md).
-        if not re.match(r"^(https?://|legacy/)", e["url"]):
+        # (preserved monorepo write-ups) or examples/ (current reference data).
+        if not re.match(r"^(https?://|legacy/|examples/)", e["url"]):
             fail(f"{where} ({title!r}) url must start with http(s):// "
-                 f"or be a relative legacy/ path")
+                 f"or be a relative legacy/ or examples/ path")
         tags = e.get("tags") or []
         if not isinstance(tags, list):
             fail(f"{where} ({title!r}) tags must be a list")
