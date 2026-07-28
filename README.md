@@ -7,14 +7,14 @@ The catalog below links every End User Messaging, SES, and (legacy) Pinpoint sam
 - Original monorepo source (CloudFormation templates, Lambda code, examples) and the detailed write-ups with architecture diagrams are preserved under [`legacy/`](legacy/) (see [`legacy/LEGACY_README.md`](legacy/LEGACY_README.md)). Entries for those patterns link straight to their write-up.
 
 <!-- AUTOGEN:START - do not edit below; edit catalog.yml instead -->
-**84 reference architectures** &bull; 32 mainline &bull; 52 archived
+**88 reference architectures** &bull; 36 mainline &bull; 52 archived
 
 > **Filter:** use your browser find (`Ctrl/Cmd-F`) on a tag like `genai` or `whatsapp`, or jump to a section below. Every tag in the catalog is listed in the [Tag index](#tag-index).
 
 ### Contents
 
 - [AWS End User Messaging](#aws-end-user-messaging) (18)
-- [Amazon Simple Email Service (SES)](#amazon-simple-email-service-ses) (14)
+- [Amazon Simple Email Service (SES)](#amazon-simple-email-service-ses) (18)
 - [Multi-channel / Combined](#multi-channel--combined) (1)
 - [Amazon Pinpoint (Archived)](#amazon-pinpoint-archived) (51)
 - [Tag index](#tag-index)
@@ -51,11 +51,15 @@ Email sending, receiving, event processing and analytics with Amazon SES.
 
 | Sample | Tags | Description |
 |--------|------|-------------|
+| [Amazon SES Agent Context Pack](https://github.com/aws-samples/sample-amazon-ses-agent-context-pack) | `genai` `agents` `context-pack` `mcp` | An agent context pack giving AI agents the knowledge to work with Amazon SES |
 | [Amazon SES for MCP](https://github.com/aws-samples/sample-for-amazon-ses-mcp) | `mcp` `genai` `agents` | An MCP server that lets AI agents send email through Amazon SES |
+| [Amazon SES Mail Manager Agent Context Pack](https://github.com/aws-samples/sample-amazon-ses-mail-manager-agent-context-pack) | `genai` `agents` `context-pack` `mail-manager` | An agent context pack giving AI agents the knowledge to work with Amazon SES Mail Manager |
+| [Email One-Click Unsubscribe](https://github.com/aws-samples/email-one-click-unsubscribe) | `unsubscribe` `opt-out` `compliance` `list-unsubscribe` | Handle RFC 8058 one-click unsubscribe headers to meet Gmail and Yahoo bulk sender requirements with Amazon SES |
 | [GenAI Email Categorization with SES Mail Manager](https://github.com/aws-samples/sample-gen-ai-email-categorization-using-ses-mail-manager) | `mail-manager` `genai` `bedrock` `inbound` | Classify and organize inbound email using generative AI with SES Mail Manager |
 | [Mass Email System](https://github.com/aws-samples/sample-mass-email-system) | `bulk` `serverless` `throughput` | A serverless mass email solution built on Amazon SES |
 | [Pinpoint to SES Email Template Migrator](https://github.com/aws-samples/sample-amazon-pinpoint-to-ses-email-template-migrator) | `migration` `templates` `pinpoint` | Migrate email templates from Amazon Pinpoint to Amazon SES |
 | [Priority Mailer CDK Solution](https://github.com/aws-samples/sample-priority-mailer-cdk-solution-using-amazon-ses) | `cdk` `priority` `throughput` | A CDK solution that sends email through Amazon SES with priority-based routing |
+| [Serverless Mail](https://github.com/aws-samples/serverless-mail) | `serverless` `inbound` `samples` | A collection of serverless email samples on Amazon SES, including inbound parsing, S/MIME validation and security record hosting |
 | [SES Auto Reply](legacy/LEGACY_README.md#ses-auto-reply) | `inbound` `templates` `serverless` | Send a templated automatic response for non-monitored inbound email addresses |
 | [SES Bounce and Complaint Dashboard](https://github.com/aws-samples/amazon-ses-bounce-dashboard) | `bounces` `complaints` `dashboard` `reputation` | Retrieve bounces and complaints from Amazon SES and display them on a dashboard |
 | [SES Campaign Manager](https://github.com/aws-samples/sample-amazon-ses-campaign-manager) | `campaigns` `bulk` `serverless` | Create and manage email campaigns on top of Amazon SES |
@@ -136,7 +140,7 @@ Amazon Pinpoint patterns retained for reference. Pinpoint is on a deprecation pa
 
 Search (`Ctrl/Cmd-F`) any tag to find matching samples.
 
-`10dlc` (1) `ads` (2) `agents` (3) `amazon-connect` (3) `analytics` (5) `api` (2) `api-gateway` (1) `architecture` (1) `archiving` (1) `athena` (2) `attachments` (1) `authentication` (1) `automation` (8) `bedrock` (4) `billing` (1) `bounces` (2) `bulk` (3) `callback` (1) `campaigns` (7) `cdk` (3) `channels` (1) `chat` (2) `chatbot` (1) `cloudfront` (1) `combined` (1) `commerce` (1) `complaints` (2) `compliance` (2) `connect` (1) `custom-channel` (15) `dashboard` (4) `data-lake` (4) `database` (1) `demo` (1) `dynamodb` (2) `email` (3) `endpoints` (4) `events` (8) `facebook` (1) `fallback` (2) `frontend` (1) `genai` (6) `global` (2) `google-ads` (1) `hosting` (1) `ifttt` (1) `images` (1) `imports` (2) `inbound` (3) `incidents` (1) `journeys` (2) `kinesis-firehose` (1) `lambda` (4) `lex` (1) `line` (2) `links` (1) `load-testing` (1) `mail-manager` (2) `mcp` (1) `migration` (1) `ml` (1) `monitoring` (1) `multi-account` (1) `multichannel` (4) `multilingual` (2) `notifications` (3) `openclaw` (1) `opt-in` (1) `opt-out` (2) `optimization` (1) `otp` (1) `personalization` (1) `phone-validate` (1) `pinpoint` (1) `pipeline` (1) `planning` (1) `priority` (1) `push` (1) `queuing` (1) `quicksight` (1) `rds` (1) `reference` (2) `registration` (1) `reporting` (1) `reputation` (3) `rest` (1) `retry` (2) `s3` (6) `salesforce` (1) `samples` (1) `scheduling` (2) `segments` (3) `serverless` (5) `slack` (1) `sms` (20) `sns` (2) `social` (3) `templates` (4) `throughput` (3) `translate` (1) `twitter` (1) `two-way` (5) `unsubscribe` (1) `url-shortener` (1) `vdm` (1) `voice` (6) `wechat` (1) `whatsapp` (9)
+`10dlc` (1) `ads` (2) `agents` (5) `amazon-connect` (3) `analytics` (5) `api` (2) `api-gateway` (1) `architecture` (1) `archiving` (1) `athena` (2) `attachments` (1) `authentication` (1) `automation` (8) `bedrock` (4) `billing` (1) `bounces` (2) `bulk` (3) `callback` (1) `campaigns` (7) `cdk` (3) `channels` (1) `chat` (2) `chatbot` (1) `cloudfront` (1) `combined` (1) `commerce` (1) `complaints` (2) `compliance` (3) `connect` (1) `context-pack` (2) `custom-channel` (15) `dashboard` (4) `data-lake` (4) `database` (1) `demo` (1) `dynamodb` (2) `email` (3) `endpoints` (4) `events` (8) `facebook` (1) `fallback` (2) `frontend` (1) `genai` (8) `global` (2) `google-ads` (1) `hosting` (1) `ifttt` (1) `images` (1) `imports` (2) `inbound` (4) `incidents` (1) `journeys` (2) `kinesis-firehose` (1) `lambda` (4) `lex` (1) `line` (2) `links` (1) `list-unsubscribe` (1) `load-testing` (1) `mail-manager` (3) `mcp` (2) `migration` (1) `ml` (1) `monitoring` (1) `multi-account` (1) `multichannel` (4) `multilingual` (2) `notifications` (3) `openclaw` (1) `opt-in` (1) `opt-out` (3) `optimization` (1) `otp` (1) `personalization` (1) `phone-validate` (1) `pinpoint` (1) `pipeline` (1) `planning` (1) `priority` (1) `push` (1) `queuing` (1) `quicksight` (1) `rds` (1) `reference` (2) `registration` (1) `reporting` (1) `reputation` (3) `rest` (1) `retry` (2) `s3` (6) `salesforce` (1) `samples` (2) `scheduling` (2) `segments` (3) `serverless` (6) `slack` (1) `sms` (20) `sns` (2) `social` (3) `templates` (4) `throughput` (3) `translate` (1) `twitter` (1) `two-way` (5) `unsubscribe` (2) `url-shortener` (1) `vdm` (1) `voice` (6) `wechat` (1) `whatsapp` (9)
 
 ## Add a new entry
 

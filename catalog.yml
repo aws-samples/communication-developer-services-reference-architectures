@@ -288,6 +288,35 @@ entries:
     url: https://github.com/aws-samples/sample-amazon-pinpoint-to-ses-email-template-migrator
     desc: Migrate email templates from Amazon Pinpoint to Amazon SES
 
+  # --- Added from LIBRARIAN catalog (added-librarian-2026-07) ---
+  - title: Email One-Click Unsubscribe
+    service: SES
+    status: mainline
+    tags: [unsubscribe, opt-out, compliance, list-unsubscribe]
+    url: https://github.com/aws-samples/email-one-click-unsubscribe
+    desc: Handle RFC 8058 one-click unsubscribe headers to meet Gmail and Yahoo bulk sender requirements with Amazon SES
+
+  - title: Serverless Mail
+    service: SES
+    status: mainline
+    tags: [serverless, inbound, samples]
+    url: https://github.com/aws-samples/serverless-mail
+    desc: A collection of serverless email samples on Amazon SES, including inbound parsing, S/MIME validation and security record hosting
+
+  - title: Amazon SES Agent Context Pack
+    service: SES
+    status: mainline
+    tags: [genai, agents, context-pack, mcp]
+    url: https://github.com/aws-samples/sample-amazon-ses-agent-context-pack
+    desc: An agent context pack giving AI agents the knowledge to work with Amazon SES
+
+  - title: Amazon SES Mail Manager Agent Context Pack
+    service: SES
+    status: mainline
+    tags: [genai, agents, context-pack, mail-manager]
+    url: https://github.com/aws-samples/sample-amazon-ses-mail-manager-agent-context-pack
+    desc: An agent context pack giving AI agents the knowledge to work with Amazon SES Mail Manager
+
   # ===== Multi-channel / Combined (mainline) ==================================
   - title: Simple CMS or Static Website Host
     service: MULTI
