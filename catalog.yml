@@ -4,7 +4,7 @@
 # This file is the single source of truth. README.md is generated from it by
 # CI (scripts/generate_readme.py). DO NOT edit README.md by hand.
 #
-# To add an entry: copy the template below, fill it in, open a merge request.
+# To add an entry: copy the template below, fill it in, open a pull request.
 # CI validates the file and regenerates the README.
 #
 # -----------------------------------------------------------------------------
@@ -168,6 +168,13 @@ entries:
     url: https://github.com/aws-samples/sample-conversational-commerce-openclaw-eum
     desc: Multi-channel conversational commerce on WhatsApp with AI agents (Bedrock AgentCore and OpenClaw) and a web storefront
 
+  - title: RCS Agent Setup and Send Messages
+    service: EUM
+    status: mainline
+    tags: [rcs, cli, agents, branding, inbound]
+    url: https://github.com/aws-samples/sample-rcs-agent-setup-and-send-messages
+    desc: Create, brand, register and test an RCS agent with AWS End User Messaging from the AWS CLI, including verified testers and inbound keyword replies
+
   - title: SNS SMS Detailed Monitoring Dashboard
     service: EUM
     status: mainline
@@ -303,19 +310,19 @@ entries:
     url: https://github.com/aws-samples/serverless-mail
     desc: A collection of serverless email samples on Amazon SES, including inbound parsing, S/MIME validation and security record hosting
 
-  - title: Amazon SES Agent Context Pack
+  - title: Amazon SES Agent Skills
     service: SES
     status: mainline
-    tags: [genai, agents, context-pack, mcp]
-    url: https://github.com/aws-samples/sample-amazon-ses-agent-context-pack
-    desc: An agent context pack giving AI agents the knowledge to work with Amazon SES
+    tags: [genai, agents, skills, context-pack]
+    url: https://github.com/amazon-ses/skills
+    desc: Agent skills giving AI coding agents the knowledge to send, authenticate and manage email with the Amazon SES V2 API
 
-  - title: Amazon SES Mail Manager Agent Context Pack
+  - title: Amazon SES Mail Manager Agent Skills
     service: SES
     status: mainline
-    tags: [genai, agents, context-pack, mail-manager]
-    url: https://github.com/aws-samples/sample-amazon-ses-mail-manager-agent-context-pack
-    desc: An agent context pack giving AI agents the knowledge to work with Amazon SES Mail Manager
+    tags: [genai, agents, skills, context-pack, mail-manager]
+    url: https://github.com/amazon-ses/skills
+    desc: Agent skills giving AI coding agents the knowledge to process, route, filter and archive inbound email with SES Mail Manager
 
   # ===== Multi-channel / Combined (mainline) ==================================
   - title: Simple CMS or Static Website Host
