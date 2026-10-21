@@ -80,9 +80,9 @@ entries:
   - title: Chat Orchestrator for Generative AI Conversations
     service: EUM
     status: mainline
-    tags: [genai, chat, multichannel, agents, bedrock]
+    tags: [genai, chat, multichannel, agents, bedrock, agentcore, sms, rcs, whatsapp]
     url: https://github.com/aws-samples/sample-chat-orchestrator-for-generative-ai-conversations
-    desc: Route conversations across channels to generative AI agents and Q&A bots (the communications hub)
+    desc: Route SMS, RCS and WhatsApp conversations to Amazon Bedrock agents, knowledge bases or your own Strands agent on AgentCore Runtime (the communications hub)
 
   - title: Omni-channel Fallback Messaging
     service: EUM
@@ -175,6 +175,13 @@ entries:
     url: https://github.com/aws-samples/sample-rcs-agent-setup-and-send-messages
     desc: Create, brand, register and test an RCS agent with AWS End User Messaging from the AWS CLI, including verified testers and inbound keyword replies
 
+  - title: RCS Messaging Demo App (AnyHealth)
+    service: EUM
+    status: mainline
+    tags: [rcs, demo, cdk, dashboard, two-way, healthcare]
+    url: https://github.com/aws-samples/sample-rcs-messaging-demo-app
+    desc: Deploy an end-to-end RCS demo with a local dashboard to send 20 use case examples to test devices, follow conversations live and reply as a human agent
+
   - title: SNS SMS Detailed Monitoring Dashboard
     service: EUM
     status: mainline
@@ -259,6 +266,13 @@ entries:
     tags: [campaigns, bulk, serverless]
     url: https://github.com/aws-samples/sample-amazon-ses-campaign-manager
     desc: Create and manage email campaigns on top of Amazon SES
+
+  - title: Agentic Campaign Manager
+    service: SES
+    status: mainline
+    tags: [genai, agents, bedrock, agentcore, campaigns, analytics]
+    url: https://github.com/aws-samples/sample-agentic-campaign-manager
+    desc: Run segmentation, templates, scheduling, sending and engagement analytics for SES email campaigns through a multi-agent chat on Amazon Bedrock AgentCore
 
   - title: Priority Mailer CDK Solution
     service: SES
