@@ -113,14 +113,14 @@ def main() -> int:
             print(f"  - {title}  ({slug})")
 
     if check:
-        if drift:
+        if drift or errors:
             return 1
         print("\nno mainline/archived drift.")
         return 0
 
     OUT.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n")
     print(f"\nwrote {OUT.relative_to(ROOT)}: {len(meta)} repos, {errors} errors.")
-    return 1 if errors and not any(m.get("pushed_at") for m in meta.values()) else 0
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

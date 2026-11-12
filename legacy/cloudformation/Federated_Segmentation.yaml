@@ -131,7 +131,7 @@ Resources:
           QUERY_RESULTS_PATH: !Ref QueryResultsS3Path
       Code:
         ZipFile: |
-          mport boto3
+          import boto3
           import time
           import os
           import logging

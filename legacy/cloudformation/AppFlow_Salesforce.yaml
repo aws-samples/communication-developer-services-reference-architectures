@@ -116,7 +116,7 @@ Resources:
                       for sfId in afd['ChangeEventHeader']['recordIds']:
                         for et in ['Email', 'MobilePhone', 'HomePhone']:
                           ce = {
-                            EndpointStatus: 'INACTIVE'
+                            'EndpointStatus': 'INACTIVE'
                           }
                           se(ce, '%s%s' % (sfId, et))
 
@@ -234,7 +234,7 @@ Resources:
 #             for salesforce_id in appflow_data['ChangeEventHeader']['recordIds']:
 #               for endpoint_type in ['Email', 'MobilePhone', 'HomePhone']:
 #                 channel_endpoint = {
-#                   EndpointStatus: 'INACTIVE'
+#                   'EndpointStatus': 'INACTIVE'
 #                 }
 #                 send_endpoint(channel_endpoint, '%s%s' % (salesforce_id, endpoint_type))
 #

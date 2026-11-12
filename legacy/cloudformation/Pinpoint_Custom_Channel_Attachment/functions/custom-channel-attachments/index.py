@@ -109,8 +109,8 @@ def send_email_attach(s3_bucket_name,AttachmentPrefix,endpoints,filetype,SenderA
     SUBJECT = HTMLTemplate['EmailTemplateResponse']['Subject']
     BODY_HTML = HTMLTemplate['EmailTemplateResponse']['HtmlPart']
     if Attachment == "ONEPER":
-        key = AttachmentPrefix + "_" + endpoint + filetype
         for endpoint in endpoints:
+            key = AttachmentPrefix + "_" + endpoint + filetype
             EndpointData = endpoints[endpoint]
             ToAddress =[EndpointData['Address']]
             s3_object = s3_client.get_object(Bucket=s3_bucket_name,Key=key)

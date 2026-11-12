@@ -119,6 +119,13 @@ entries:
     url: https://github.com/aws-samples/sample-sms-10dlc-registration-automation
     desc: Automate 10DLC brand and campaign registration for SMS
 
+  - title: SMS Toll-Free Registration Automation
+    service: EUM
+    status: mainline
+    tags: [sms, toll-free, registration, automation]
+    url: https://github.com/aws-samples/sample-sms-tfn-registration-automation
+    desc: Automate US toll-free number provisioning, registration and approval tracking with Step Functions and EventBridge callbacks
+
   - title: Engagement Database and Analytics
     service: EUM
     status: mainline
@@ -273,6 +280,13 @@ entries:
     tags: [genai, agents, bedrock, agentcore, campaigns, analytics]
     url: https://github.com/aws-samples/sample-agentic-campaign-manager
     desc: Run segmentation, templates, scheduling, sending and engagement analytics for SES email campaigns through a multi-agent chat on Amazon Bedrock AgentCore
+
+  - title: SES Insights Agent
+    service: SES
+    status: mainline
+    tags: [analytics, genai, agents, agentcore, mcp, athena]
+    url: https://github.com/aws-samples/sample-ses-insights-agent
+    desc: Ask questions about SES event data in natural language through an AgentCore MCP Gateway agent backed by a Firehose, S3, Glue and Athena pipeline
 
   - title: Priority Mailer CDK Solution
     service: SES

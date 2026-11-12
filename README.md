@@ -7,14 +7,14 @@ The catalog below links every End User Messaging, SES, and (legacy) Pinpoint sam
 - Original monorepo source (CloudFormation templates, Lambda code, examples) and the detailed write-ups with architecture diagrams are preserved under [`legacy/`](legacy/) (see [`legacy/LEGACY_README.md`](legacy/LEGACY_README.md)). Entries for those patterns link straight to their write-up.
 
 <!-- AUTOGEN:START - do not edit below; edit catalog.yml instead -->
-**91 reference architectures** &bull; 39 mainline &bull; 52 archived
+**93 reference architectures** &bull; 41 mainline &bull; 52 archived
 
 > **Filter:** use your browser find (`Ctrl/Cmd-F`) on a tag like `genai` or `whatsapp`, or jump to a section below. Every tag in the catalog is listed in the [Tag index](#tag-index).
 
 ### Contents
 
-- [AWS End User Messaging](#aws-end-user-messaging) (20)
-- [Amazon Simple Email Service (SES)](#amazon-simple-email-service-ses) (19)
+- [AWS End User Messaging](#aws-end-user-messaging) (21)
+- [Amazon Simple Email Service (SES)](#amazon-simple-email-service-ses) (20)
 - [Multi-channel / Combined](#multi-channel--combined) (1)
 - [Amazon Pinpoint (Archived)](#amazon-pinpoint-archived) (51)
 - [Tag index](#tag-index)
@@ -40,6 +40,7 @@ WhatsApp, SMS, push and social messaging built on AWS End User Messaging. These 
 | [RCS Messaging Demo App (AnyHealth)](https://github.com/aws-samples/sample-rcs-messaging-demo-app) | `rcs` `demo` `cdk` `dashboard` `two-way` `healthcare` | Deploy an end-to-end RCS demo with a local dashboard to send 20 use case examples to test devices, follow conversations live and reply as a human agent |
 | [REST Frontend for End User Messaging](https://github.com/aws-samples/sample-rest-frontend-for-end-user-messaging) | `api` `rest` `frontend` | A REST API frontend for sending messages through AWS End User Messaging |
 | [SMS 10DLC Registration Automation](https://github.com/aws-samples/sample-sms-10dlc-registration-automation) | `sms` `10dlc` `registration` `automation` | Automate 10DLC brand and campaign registration for SMS |
+| [SMS Toll-Free Registration Automation](https://github.com/aws-samples/sample-sms-tfn-registration-automation) | `sms` `toll-free` `registration` `automation` | Automate US toll-free number provisioning, registration and approval tracking with Step Functions and EventBridge callbacks |
 | [SNS SMS Detailed Monitoring Dashboard](https://github.com/aws-samples/amazon-sns-sms-detailed-monitoring-dashboard) | `sms` `monitoring` `dashboard` `sns` | Build a detailed monitoring dashboard for SMS sent through Amazon SNS |
 | [WhatsApp Auto-Reply](https://github.com/aws-samples/communication-developer-services-reference-architectures) | `whatsapp` `serverless` | Automatically respond to inbound WhatsApp messages using AWS End User Messaging Social |
 | [WhatsApp Business with Amazon Connect Chat](https://github.com/aws-samples/sample-whatsapp-end-user-messaging-connect-chat) | `whatsapp` `amazon-connect` `chat` `cdk` | Integrate WhatsApp Business with Amazon Connect using AWS End User Messaging |
@@ -69,6 +70,7 @@ Email sending, receiving, event processing and analytics with Amazon SES.
 | [SES Email S3 Event Database](legacy/LEGACY_README.md#ses-email-s3-event-database) | `events` `data-lake` `athena` `s3` | Archive SES email events to S3 and query them with Amazon Athena |
 | [SES Event Data Dashboard and Analysis](https://github.com/aws-samples/amazon-ses-event-data-dashboard-analysis) &nbsp;`archived` | `events` `analytics` `dashboard` | Analyze and visualize Amazon SES event data (repo archived on GitHub) |
 | [SES Event Processing](legacy/LEGACY_README.md#ses-event-processing) | `events` `reputation` `bounces` `complaints` | Process bounces and complaints to protect your sending reputation |
+| [SES Insights Agent](https://github.com/aws-samples/sample-ses-insights-agent) | `analytics` `genai` `agents` `agentcore` `mcp` `athena` | Ask questions about SES event data in natural language through an AgentCore MCP Gateway agent backed by a Firehose, S3, Glue and Athena pipeline |
 | [SES Load Testing and Message Queuing](https://github.com/aws-samples/load-testing-sample-amazon-ses) | `load-testing` `queuing` `throughput` | Queue bulk email while managing errors and testing sending throughput |
 | [SES VDM Stat Export](legacy/LEGACY_README.md#ses-vdm-stat-export) | `vdm` `analytics` `billing` | Export monthly Virtual Deliverability Manager data for validation and billing |
 | [Two-Way Email to SMS with SES](https://github.com/aws-samples/two-way-email-to-sms-with-ses) | `mail-manager` `sms` `inbound` `two-way` | Bridge email and SMS in both directions using Amazon SES |
@@ -143,7 +145,7 @@ Amazon Pinpoint patterns retained for reference. Pinpoint is on a deprecation pa
 
 Search (`Ctrl/Cmd-F`) any tag to find matching samples.
 
-`10dlc` (1) `ads` (2) `agentcore` (2) `agents` (7) `amazon-connect` (3) `analytics` (6) `api` (2) `api-gateway` (1) `architecture` (1) `archiving` (1) `athena` (2) `attachments` (1) `authentication` (1) `automation` (8) `bedrock` (5) `billing` (1) `bounces` (2) `branding` (1) `bulk` (3) `callback` (1) `campaigns` (8) `cdk` (4) `channels` (1) `chat` (2) `chatbot` (1) `cli` (1) `cloudfront` (1) `combined` (1) `commerce` (1) `complaints` (2) `compliance` (3) `connect` (1) `context-pack` (2) `custom-channel` (15) `dashboard` (5) `data-lake` (4) `database` (1) `demo` (2) `dynamodb` (2) `email` (3) `endpoints` (4) `events` (8) `facebook` (1) `fallback` (2) `frontend` (1) `genai` (9) `global` (2) `google-ads` (1) `healthcare` (1) `hosting` (1) `ifttt` (1) `images` (1) `imports` (2) `inbound` (5) `incidents` (1) `journeys` (2) `kinesis-firehose` (1) `lambda` (4) `lex` (1) `line` (2) `links` (1) `list-unsubscribe` (1) `load-testing` (1) `mail-manager` (3) `mcp` (1) `migration` (1) `ml` (1) `monitoring` (1) `multi-account` (1) `multichannel` (4) `multilingual` (2) `notifications` (3) `openclaw` (1) `opt-in` (1) `opt-out` (3) `optimization` (1) `otp` (1) `personalization` (1) `phone-validate` (1) `pinpoint` (1) `pipeline` (1) `planning` (1) `priority` (1) `push` (1) `queuing` (1) `quicksight` (1) `rcs` (3) `rds` (1) `reference` (2) `registration` (1) `reporting` (1) `reputation` (3) `rest` (1) `retry` (2) `s3` (6) `salesforce` (1) `samples` (2) `scheduling` (2) `segments` (3) `serverless` (6) `skills` (2) `slack` (1) `sms` (21) `sns` (2) `social` (3) `templates` (4) `throughput` (3) `translate` (1) `twitter` (1) `two-way` (6) `unsubscribe` (2) `url-shortener` (1) `vdm` (1) `voice` (6) `wechat` (1) `whatsapp` (10)
+`10dlc` (1) `ads` (2) `agentcore` (3) `agents` (8) `amazon-connect` (3) `analytics` (7) `api` (2) `api-gateway` (1) `architecture` (1) `archiving` (1) `athena` (3) `attachments` (1) `authentication` (1) `automation` (9) `bedrock` (5) `billing` (1) `bounces` (2) `branding` (1) `bulk` (3) `callback` (1) `campaigns` (8) `cdk` (4) `channels` (1) `chat` (2) `chatbot` (1) `cli` (1) `cloudfront` (1) `combined` (1) `commerce` (1) `complaints` (2) `compliance` (3) `connect` (1) `context-pack` (2) `custom-channel` (15) `dashboard` (5) `data-lake` (4) `database` (1) `demo` (2) `dynamodb` (2) `email` (3) `endpoints` (4) `events` (8) `facebook` (1) `fallback` (2) `frontend` (1) `genai` (10) `global` (2) `google-ads` (1) `healthcare` (1) `hosting` (1) `ifttt` (1) `images` (1) `imports` (2) `inbound` (5) `incidents` (1) `journeys` (2) `kinesis-firehose` (1) `lambda` (4) `lex` (1) `line` (2) `links` (1) `list-unsubscribe` (1) `load-testing` (1) `mail-manager` (3) `mcp` (2) `migration` (1) `ml` (1) `monitoring` (1) `multi-account` (1) `multichannel` (4) `multilingual` (2) `notifications` (3) `openclaw` (1) `opt-in` (1) `opt-out` (3) `optimization` (1) `otp` (1) `personalization` (1) `phone-validate` (1) `pinpoint` (1) `pipeline` (1) `planning` (1) `priority` (1) `push` (1) `queuing` (1) `quicksight` (1) `rcs` (3) `rds` (1) `reference` (2) `registration` (2) `reporting` (1) `reputation` (3) `rest` (1) `retry` (2) `s3` (6) `salesforce` (1) `samples` (2) `scheduling` (2) `segments` (3) `serverless` (6) `skills` (2) `slack` (1) `sms` (22) `sns` (2) `social` (3) `templates` (4) `throughput` (3) `toll-free` (1) `translate` (1) `twitter` (1) `two-way` (6) `unsubscribe` (2) `url-shortener` (1) `vdm` (1) `voice` (6) `wechat` (1) `whatsapp` (10)
 
 ## Add a new entry
 

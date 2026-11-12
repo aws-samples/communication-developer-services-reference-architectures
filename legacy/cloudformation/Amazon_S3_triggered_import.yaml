@@ -317,8 +317,7 @@ Resources:
                         "SegmentId.$": "$.SegmentId",
                         "ExternalId.$": "$.ExternalId",
                         "Status.$": "$.Status",
-                        "ResponseFormatted.$": "$.ResponseFormatted",
-                        "ImportId.$": "$.ImportId"
+                        "ResponseFormatted.$": "$.ResponseFormatted"
                       },
                       "ImportInput.$": "$$.Execution.Input.S3URL"
                     },
